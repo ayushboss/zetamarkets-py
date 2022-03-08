@@ -3,11 +3,31 @@
 This project is intended to be a python SDK for `Zetamarkets` suite of tools. It is a loose port of the 
 [Zetamarkets Javascript SDK](https://github.com/zetamarkets/sdk)
 
-Please **Don't** use this project at the moment as it is a work in progress. We'll see how far we get at the end of the Solana Hackathon which is currently ongoing.
+Please **Don't** use this project at the moment as it is a work in progress. 
+
+## Install
+
+`pip3 install zetamarkets`
+
+
+### Setting up a wallet
+
+```sh
+# Generate new keypair at ./bot-key.json
+solana-keygen new -o bot-key.json
+
+# View new pubkey address
+solana-keygen pubkey bot-key.json
+
+# Put private key into .env file used by script
+# (Make sure you are in the same directory as where you are running the script.)
+echo private_key=`cat bot-key.json` >> .env
+```
+
 
 ## TODO
 
-- [ ] Basic Setup boilerplate
+- [x] Basic Setup boilerplate
 - [ ] Display Exchange State
 - [ ] User Margin Accounts
 - [ ] Trade and View positions
@@ -18,5 +38,6 @@ Please **Don't** use this project at the moment as it is a work in progress. We'
 
 
 ## Examples
-TODO
+
+Complete basic example
 

@@ -1,12 +1,16 @@
 [tool.poetry]
 name = "zetamarkets"
 version = "0.0.1-alpha"
-description = "Coming on Saturday"
+description = "Python Client library for Zetamarkets"
 authors = ["Joel Lee <joel@joellee.org>"]
 license = "MIT"
 
 [tool.poetry.dependencies]
-python = "^3.7"
+python = "^3.9"
+httpx = "^0.18.2"
+solana = "^0.21.0"
+anchorpy = "^0.7.0"
+pythclient ="^0.1.0"
 
 [tool.poetry.dev-dependencies]
 
