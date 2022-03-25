@@ -1,4 +1,4 @@
-from zetamarkets import utils
+from zetamarkets import utils, oracle
 
 
 class Exchange:
@@ -8,7 +8,15 @@ class Exchange:
     _serum_authority = None
 
     def __init__(self, program_id, network, connection, wallet):
-        pass
+        self._init(program_id, network, connection, wallet)
+
+    def _init(self, program_id, network, connection, wallet):
+        self._network = network
+        self._oracle = oracle.Oracle(self._network, connection)
+
+    @property
+    def oracle(self):
+        return self._oracle
 
     @classmethod
     def load(cls, program_id, network, connection, opts, wallet, throttle_ms):
@@ -24,3 +32,7 @@ class Exchange:
 
         # Load Zeta Group
         [underlying, _underlying_nonce] = utils.get_underlying(program_id, 0)
+
+    def _subscribe_oracle(self, callback):
+        # TODO: Implement this
+        pass
