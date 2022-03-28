@@ -1,11 +1,26 @@
 from zetamarkets import utils, oracle
 
 
-class Exchange:
+class ExchangeMeta(type):
+    _instances = {}
+
+    def __call__(cls, *args, **kwargs):
+        """
+        Possible changes to the value of the `__init__` argument do not affect
+        the returned instance.
+        """
+        if cls not in cls._instances:
+            instance = super().__call__(*args, **kwargs)
+            cls._instances[cls] = instance
+        return cls._instances[cls]
+
+
+class Exchange(metaclass=ExchangeMeta):
     is_initialized = False
     _mint_authority = None
     _state = None
     _serum_authority = None
+    _instance = None
 
     def __init__(self, program_id, network, connection, wallet):
         self._init(program_id, network, connection, wallet)
@@ -13,10 +28,20 @@ class Exchange:
     def _init(self, program_id, network, connection, wallet):
         self._network = network
         self._oracle = oracle.Oracle(self._network, connection)
+        self._zetagroup = None
+        self._state_address = None
 
     @property
     def oracle(self):
         return self._oracle
+
+    @property
+    def zetagroup(self):
+        return self._zetagroup
+
+    @property
+    def state_address(self):
+        return self._state_address
 
     @classmethod
     def load(cls, program_id, network, connection, opts, wallet, throttle_ms):

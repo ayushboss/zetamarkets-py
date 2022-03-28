@@ -66,4 +66,18 @@ class Market:
         return self.strikes
 
     def update_order_book(self):
-        pass
+        # self._bids = self._serum_market.load_bids(Exchange.provider.connection)
+        # self._asks = self._serum_market.load_asks(Exchange.provider.connection)
+        # orderbook_sides = [self._bids, self._asks]
+        """
+        for orderbook_side in orderbook_sides:
+            descending = orderbook_side.is_bids ? True : False
+            slab_items = list(orderbook_side._slab.items(descending))[0]
+            key = slab_items.key
+            quantity = slab_items.quantity
+            price = orderbook_side.__get_price_from_slab(orderbook_side._slab)
+
+            levels = []
+            # Convert generator to key and quan
+            descending = orderbook_side.slab
+        """

@@ -1,6 +1,9 @@
 from anchorpy import Idl, Program
 import solana
+from decimal import Decimal
+import math
 from typing import Dict
+from zetamarkets import constants, exchange
 
 
 def default_commitment() -> Dict:
@@ -86,3 +89,18 @@ def get_underlying(program_id, underlying_index: int):
     return solana.publickey.PublicKey.find_program_address(
         [bytes("underlying", "utf-8"), bytes([underlying_index])], program_id
     )
+
+
+def convert_native_lot_size_to_decimal(amount):
+    """
+    Converts a native lot size where 1 unit = 0.001 lots to human readable decimal
+    """
+    return amount / math.pow(10, constants.POSITION_PRECISION)
+
+
+def convert_decimal_to_native_integer(amount):
+    return Decimal(amount)
+
+
+def display_state():
+    print(exchange.Exchange().zetagroup)
