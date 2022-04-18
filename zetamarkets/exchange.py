@@ -1,4 +1,5 @@
-from zetamarkets import utils, oracle
+from zetamarkets import utils, oracle, events
+from typing import Callable
 
 
 class ExchangeMeta(type):
@@ -16,11 +17,11 @@ class ExchangeMeta(type):
 
 
 class Exchange(metaclass=ExchangeMeta):
-    is_initialized = False
     _mint_authority = None
     _state = None
     _serum_authority = None
     _instance = None
+    is_initialized = False
 
     def __init__(self, program_id, network, connection, wallet):
         self._init(program_id, network, connection, wallet)
@@ -30,6 +31,7 @@ class Exchange(metaclass=ExchangeMeta):
         self._oracle = oracle.Oracle(self._network, connection)
         self._zetagroup = None
         self._state_address = None
+        self._is_initialized = False
 
     @property
     def oracle(self):
@@ -58,6 +60,16 @@ class Exchange(metaclass=ExchangeMeta):
         # Load Zeta Group
         [underlying, _underlying_nonce] = utils.get_underlying(program_id, 0)
 
-    def _subscribe_oracle(self, callback):
-        # TODO: Implement this
-        pass
+    async def _subscribe_oracle(self, callback: Callable):
+        def _subscribe_oracle_helper(price):
+            if self._is_initialized:
+                # TODO: Patch after writing margin calculator
+                print("Update margin requirements")
+            if callback is not None:
+                callback(events.EventType.ORACLE, price)
+
+        await self._oracle.subscribe_price_feeds()
+
+    def initialize_zetamarkets(self):
+        # TOD: Add logic
+        self._is_initialized = True

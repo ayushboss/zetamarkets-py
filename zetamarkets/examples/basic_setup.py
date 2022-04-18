@@ -7,6 +7,7 @@ from solana.keypair import Keypair
 from solana.rpc.api import Client
 from typing import Dict
 from zetamarkets.exchange import Exchange
+from zetamarkets import utils
 
 
 keypair = Keypair()
@@ -19,7 +20,7 @@ SERVER_URL = "https://server.zeta.markets"
 NETWORK_URL = "https://api.devnet.solana.com"
 
 # // Starts a solana web3 connection to an RPC endpoint
-connection = Client(NETWORK_URL, default_commitment())
+connection = Client(NETWORK_URL, utils.default_commitment())
 
 # // Airdrop some SOL to your wallet
 conn = connection.request_airdrop(keypair.public_key, 100000000)
