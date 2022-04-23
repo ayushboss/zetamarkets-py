@@ -20,8 +20,8 @@ class Kind(Enum):
 
 
 class MarginType(Enum):
-    INITIAL = "initial"
-    MAINTENANCE = "maintenance"
+    Initial = "initial"
+    Maintenance = "maintenance"
 
 
 class ProgramAccountType(Enum):

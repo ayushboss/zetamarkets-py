@@ -11,6 +11,7 @@ class RiskCalculator:
     def _margin_requirements(self):
         return self.margin_requirements
 
+    @staticmethod
     def calculate_future_margin(spot_price: int):
         initial = spot_price * Exchange.margin_params.future_margin_initial
         maintenance = spot_price * Exchange.margin_params.future_margin_maintenance
@@ -20,33 +21,38 @@ class RiskCalculator:
             "maintenanceLong": maintenance,
             "maintenanceShort": maintenance,
         }
-    def calculate_short_option_margin(spot_price: int, otm_amount: int, margin_type) -> int:
-        base_percentage_short = Exchange.margin_params.option_dynamic_percentage_short_initial if margin_type == MarginType.Initial else Exchange.margin_params.option_dynamic_percentage_short_maintenance 
-        spot_price_percentage_short = spot_price * (base_percentage_short - otm_amount / spot_price)
+
+    @staticmethod
+    def calculate_short_option_margin(
+        spot_price: int, otm_amount: int, margin_type
+    ) -> int:
+        base_percentage_short = (
+            Exchange.margin_params.option_dynamic_percentage_short_initial
+            if margin_type == MarginType.Initial
+            else Exchange.margin_params.option_dynamic_percentage_short_maintenance
+        )
+        spot_price_percentage_short = spot_price * (
+            base_percentage_short - otm_amount / spot_price
+        )
         dynamic_margin = spot_price * (base_percentage_short - otm_amount / spot_price)
         min_margin = spot_price * spot_price_percentage_short
         return max(dynamic_margin, min_margin)
-    def calculate_long_option_margin(spot_price: int, mark_price: int, margin_type) -> int:
-        mark_percentage_long = Exchange.margin_params.option_mark_percentage_long_initial if margin_type == MarginType.Initial else Exchange.margin_params.option_mark_percentage_long_maintenance
-        spot_percentage_long = Exchange.margin_params.option_spot_percentage_long_initial if margin_type == MarginType.Initial else Exchange.margin_params.option_spot_percentage_long_maintenance
-        return min(mark_price *mark_percentage_long, spot_price * spot_percentage_long) 
 
-    def calculate_option_margin(spot_price, mark_price, kind, strike):
-        otm_amount = calculate_otm_amount(kind, strike, spot_price)
-        initial_long = calculate_long_option_margin(
-            spot_price, mark_price, MarginType.INITIAL
+    @staticmethod
+    def calculate_long_option_margin(
+        spot_price: int, mark_price: int, margin_type
+    ) -> int:
+        mark_percentage_long = (
+            Exchange.margin_params.option_mark_percentage_long_initial
+            if margin_type == MarginType.Initial
+            else Exchange.margin_params.option_mark_percentage_long_maintenance
         )
-        initial_short = calculate_short_option_margin(
-            spot_price, otm_amount, MarginType.INITIAL
+        spot_percentage_long = (
+            Exchange.margin_params.option_spot_percentage_long_initial
+            if margin_type == MarginType.Initial
+            else Exchange.margin_params.option_spot_percentage_long_maintenance
         )
-        maintainance_long = calculate_long_option_margin(
-            spot_price, mark_price, MarginType.MAINTENANCE
-        )
-        maintenance_short = calculate_short_option_margin(
-            spot_price, otm_amount, MarginType.MAINTENANCE
-        )
-        # TODO: Add return values
-        return {}
+        return min(mark_price * mark_percentage_long, spot_price * spot_percentage_long)
 
     @classmethod
     def calculate_product_margin(product_index: int, spot_price: int):
@@ -57,20 +63,22 @@ class RiskCalculator:
         strike = market.strike
         mark_price = Exchange.greeks.mark_prices[product_index]
         if kind == Kind.FUTURE:
-            return calculate_future_margin(spot_price)
+            return RiskCalculator.calculate_future_margin(spot_price)
         elif kind == Kind.CALL or kind == Kind.PUT:
-            return calculate_option_margin(spot_price, mark_price, kind, strike)
+            return RiskCalculator.calculate_option_margin(
+                spot_price, mark_price, kind, strike
+            )
 
     def get_margin_requirement(self, product_index: int, size: int, margin_type) -> int:
         if self._margin_requirements[product_index] == None:
             return 0
         if size > 0:
-            if margin_type == MarginType.INITIAL:
+            if margin_type == MarginType.Initial:
                 return size * self._margin_requirements[product_index].initial_long
             else:
                 return size * self._margin_requirements[product_index].maintenance_long
         else:
-            if margin_type == MarginType.INITIAL:
+            if margin_type == MarginType.Initial:
                 return (
                     abs(size) * self._margin_requirements[product_index].initial_short
                 )
@@ -90,6 +98,7 @@ class RiskCalculator:
                 i, spot_price
             )
 
+    @staticmethod
     def calculate_opening_size(size: int, position: int, closing_size: int) -> int:
         if (size > 0 and position > 0) or (size < 0 and position < 0):
             return size
@@ -115,7 +124,7 @@ class RiskCalculator:
                 ] * position.cost_of_trades
         return pnl
 
-    def calculate_total_initial_margin(margin_account) -> int:
+    def calculate_total_initial_margin(self, margin_account) -> int:
         margin = 0
         for i, position in enumerate(margin_account.positions):
             if (
@@ -131,9 +140,9 @@ class RiskCalculator:
                 long_lots += abs(int(position.position))
             elif int(position.position) < 0:
                 short_lots += abs(int(position.position))
-            margin_for_market = get_margin_requirement(
-                i, long_lots, MarginType.INITIAL
-            ) + get_margin_requirement(i, -short_lots)
+            margin_for_market = self.get_margin_requirement(
+                i, long_lots, MarginType.Initial
+            ) + self.get_margin_requirement(i, -short_lots)
             if margin_for_market is not None:
                 margin += margin_for_market
         return margin
@@ -144,7 +153,7 @@ class RiskCalculator:
             if int(position.position) == 0:
                 continue
             position_margin = self.get_margin_requirement(
-                index, int(position.position), MarginType.MAINTENANCE
+                index, int(position.position), MarginType.Maintenance
             )
             if position_margin is not None:
                 margin += position_margin
@@ -170,8 +179,8 @@ class RiskCalculator:
                 short_lots += abs(int(position.position))
 
             margin_for_market = self.get_margin_requirement(
-                i, long_lots, MarginType.MAINTENANCE
-            ) + self.get_margin_requirement(i, -short_lots, MarginType.MAINTENANCE)
+                i, long_lots, MarginType.Maintenance
+            ) + self.get_margin_requirement(i, -short_lots, MarginType.Maintenance)
             if margin_for_market is not None:
                 margin += margin_for_market
         return margin
@@ -192,7 +201,7 @@ class RiskCalculator:
             "availableBalanceMaintenance": available_balance_maintenance,
         }
 
-    # Calculation Util function
+    @staticmethod
     def calculate_liquidation_price(
         account_balance: int,
         margin_requirement: int,
@@ -206,6 +215,7 @@ class RiskCalculator:
 
         return mark_price - available_balance / position
 
+    @staticmethod
     def calculate_otm_amount(kind, strike: int, spot_price: int) -> int:
         if kind == Kind.CALL:
             return max(0, strike - spot_price)
@@ -213,3 +223,21 @@ class RiskCalculator:
             return max(0, spot_price - strike)
         else:
             raise Exception("Unsupported kind for OTM amount.")
+
+    @staticmethod
+    def calculate_option_margin(spot_price, mark_price, kind, strike):
+        otm_amount = RiskCalculator.calculate_otm_amount(kind, strike, spot_price)
+        initial_long = RiskCalculator.calculate_long_option_margin(
+            spot_price, mark_price, MarginType.INITIAL
+        )
+        initial_short = RiskCalculator.calculate_short_option_margin(
+            spot_price, otm_amount, MarginType.INITIAL
+        )
+        maintainance_long = RiskCalculator.calculate_long_option_margin(
+            spot_price, mark_price, MarginType.MAINTENANCE
+        )
+        maintenance_short = RiskCalculator.calculate_short_option_margin(
+            spot_price, otm_amount, MarginType.MAINTENANCE
+        )
+        # TODO: Add return values
+        return {}
