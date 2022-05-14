@@ -17,7 +17,7 @@ class Oracle:
             return None
         return self._data.get(feed)
 
-    def fetch_price(oracle_key):
+    def fetch_price(self, oracle_key):
         # TODO parse account_info.data
         account_info = self._connection.get_account_info(oracle_key)
         price_data = account_info.data
@@ -34,7 +34,7 @@ class Oracle:
             price_address = constants.PYTH_PRICE_FEEDS[self._network][feed]
 
             def on_account_change_fn(account_info, _context):
-                # Todo parse price data
+                # TODO parse price data
                 price_data = account_info.data
                 curr_price = self._data.get(feed)
                 if curr_price is not None and curr_price.price == price_data.price:

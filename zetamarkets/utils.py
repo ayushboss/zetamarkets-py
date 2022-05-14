@@ -3,7 +3,9 @@ import solana
 from decimal import Decimal
 import math
 from typing import Dict
-from zetamarkets import constants, exchange
+from zetamarkets import exchange
+from zetamarkets.constants import IDL_PATH
+from solana.publickey import PublicKey
 
 
 def default_commitment() -> Dict:
@@ -33,20 +35,20 @@ def get_serum_vault(program_id: solana.publickey.PublicKey, zeta_group):
     pass
 
 
-def get_mint_authority(program_id: solana.publickey.PublicKey):
-    return solana.publickey.PublicKey.find_program_address(
+def get_mint_authority(program_id: PublicKey):
+    return PublicKey.find_program_address(
         [bytes("mint-auth", "utf-8")], program_id
     )
 
 
-def get_serum_authority(program_id: solana.publickey.PublicKey):
+def get_serum_authority(program_id: PublicKey):
     return solana.publickey.PublicKey.find_program_address(
         [bytes("serum", "utf-8")], program_id
     )
 
 
 def get_zeta_group(
-    program_id: solana.publickey.PublicKey, mint: solana.publickey.PublicKey
+    program_id: PublicKey, mint: PublicKey
 ):
     """_summary_
 
@@ -67,7 +69,7 @@ def get_zeta_group(
     )
 
 
-def get_zeta_vault(program_id, mint):
+def get_zeta_vault(program_id: PublicKey, mint: PublicKey):
     pass
 
 
@@ -85,7 +87,7 @@ def get_market_uninitialized():
     pass
 
 
-def get_underlying(program_id, underlying_index: int):
+def get_underlying(program_id: PublicKey, underlying_index: int):
     return solana.publickey.PublicKey.find_program_address(
         [bytes("underlying", "utf-8"), bytes([underlying_index])], program_id
     )
@@ -104,3 +106,57 @@ def convert_decimal_to_native_integer(amount):
 
 def display_state():
     print(exchange.Exchange().zetagroup)
+
+
+def get_margin_account(program_id: PublicKey, zeta_group: PublicKey, user_key: PublicKey):
+    return solana.publickey.PublicKey.find_program_address(
+        [
+            bytes("margin", "utf-8"),
+            bytes(zeta_group),
+            bytes(user_key),
+        ],
+        program_id,
+    )
+
+
+def get_associated_token_address(mint: PublicKey, owner: PublicKey):
+    # TODO(J0): Figure out how to properly import Addresses below from SPL
+    return solana.publickey.PublicKey.find_program_address(
+        [
+            bytes(owner),
+            bytes(
+                solana.publickey.PublicKey(
+                    "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+                )
+            ),
+            bytes(mint),
+        ],
+        solana.publickey.PublicKey("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"),
+    )[0]
+
+def get_zeta_group(program_id: PublicKey, mint: PublicKey):
+    return PublicKey.find_program_address(
+        [
+            bytes("zeta-group", "utf-8"),
+            bytes(mint),
+        ],
+        program_id
+    )
+
+def get_greeks(program_id: PublicKey, zeta_group: PublicKey):
+    return solana.publickey.PublicKey.find_program_address(
+        [
+            bytes("greeks", "utf-8"),
+            bytes(zeta_group),
+        ],
+        program_id
+    )
+
+def get_underlying(program_id: PublicKey, underlying_index: int):
+    return solana.publickey.PublicKey.find_program_address(
+        [
+            bytes("underlying", "utf-8"),
+            bytes([underlying_index]),
+        ],
+        program_id
+    )

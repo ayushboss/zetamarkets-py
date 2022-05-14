@@ -1,7 +1,7 @@
-from constants import ACTIVE_MARKETS
-from exchange import Exchange
+# TODO: deal with potential circular import
+from zetamarkets.exchange import Exchange
 from zetamarkets.types import MarginType, Kind
-
+from zetmarkets.constants import ACTIVE_MARKETS
 
 class RiskCalculator:
     def __init__(self):
@@ -54,7 +54,7 @@ class RiskCalculator:
         )
         return min(mark_price * mark_percentage_long, spot_price * spot_percentage_long)
 
-    @classmethod
+    @staticmethod
     def calculate_product_margin(product_index: int, spot_price: int):
         market = Exchange.markets.markets[product_index]
         if market.strike == None:
@@ -107,6 +107,7 @@ class RiskCalculator:
         side_multiplier = 1 if size >= 0 else -1
         return side_multiplier * opening_size
 
+    @staticmethod
     def calculate_unrealized_pnl(margin_account) -> int:
         pnl = 0
         for i, position in enumerate(margin_account.positions):
@@ -142,7 +143,7 @@ class RiskCalculator:
                 short_lots += abs(int(position.position))
             margin_for_market = self.get_margin_requirement(
                 i, long_lots, MarginType.Initial
-            ) + self.get_margin_requirement(i, -short_lots)
+            ) + self.get_margin_requirement(i, -short_lots, MarginType.Initial)
             if margin_for_market is not None:
                 margin += margin_for_market
         return margin
@@ -228,16 +229,16 @@ class RiskCalculator:
     def calculate_option_margin(spot_price, mark_price, kind, strike):
         otm_amount = RiskCalculator.calculate_otm_amount(kind, strike, spot_price)
         initial_long = RiskCalculator.calculate_long_option_margin(
-            spot_price, mark_price, MarginType.INITIAL
+            spot_price, mark_price, MarginType.Initial
         )
         initial_short = RiskCalculator.calculate_short_option_margin(
-            spot_price, otm_amount, MarginType.INITIAL
+            spot_price, otm_amount, MarginType.Initial
         )
         maintainance_long = RiskCalculator.calculate_long_option_margin(
-            spot_price, mark_price, MarginType.MAINTENANCE
+            spot_price, mark_price, MarginType.Maintenance
         )
         maintenance_short = RiskCalculator.calculate_short_option_margin(
-            spot_price, otm_amount, MarginType.MAINTENANCE
+            spot_price, otm_amount, MarginType.Maintenance
         )
         # TODO: Add return values
         return {}

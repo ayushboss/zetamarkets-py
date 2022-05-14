@@ -6,9 +6,10 @@ import solana
 from solana.keypair import Keypair
 from solana.rpc.api import Client
 from typing import Dict
-from zetamarkets.exchange import Exchange
 from zetamarkets import utils
-
+from zetamarkets.exchange import Exchange
+from solana.publickey import PublicKey
+from solana.rpc.async_api import AsyncClient
 
 keypair = Keypair()
 
@@ -23,14 +24,38 @@ NETWORK_URL = "https://api.devnet.solana.com"
 connection = Client(NETWORK_URL, utils.default_commitment())
 
 # // Airdrop some SOL to your wallet
-conn = connection.request_airdrop(keypair.public_key, 100000000)
-print(conn)
+wallet = PublicKey("8LpEYmLf7LUcd3aEKNSmNZyYmzD8osbacK4Qb4WGTv3o")
+#conn = connection.request_airdrop(wallet, 100000000)
+#print(conn)
 
 
 mint_auth = solana.publickey.PublicKey("SRMuApVNdxXokk5GT7XD5cUUgXMBCoAz2LHeuAoKWRt")
-Exchange.load(mint_auth, "", "", "", "", "")
+
+# Exchange.load(mint_auth, "", "", "", "", "")
+
+import httpx
+import json
+
+# with httpx.Client() as client:
+#     res = client.post(
+#        f"{SERVER_URL}/faucet/USDC",
+#         data=
+#             {
+#                 "key": str(wallet),
+#                 "amount": 10000,
+#             }
+#         ,
+#         headers={"Content-Type": "application/json"},
+#     )
+#     print(res)
+PROGRAM_ID = "BG3oRikW8d16YjUEmX3ZxHm9SiJzrGtMhsSR8aCw1Cd7"
+# Fill this ins
+conn = AsyncClient(NETWORK_URL)
+print(utils.default_commitment())
+Exchange.load(PROGRAM_ID, "devnet", conn, utils.default_commitment(), None, 0)
 
 
+print("stuff")
 # // USDC faucet - Mint $10,000 USDC (Note USDC is fake on devnet)
 # async def main():
 

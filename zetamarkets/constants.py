@@ -1,4 +1,5 @@
 from solana.publickey import PublicKey
+from pathlib import Path
 
 MINTS = {"SOL": PublicKey("So11111111111111111111111111111111111111112")}
 UNDERLYINGS = [MINTS["SOL"]]
@@ -73,3 +74,7 @@ PLATFORM_PRECISION = 6
 PRICING_PRECISION = 12
 MARGIN_PRECISION = 8
 POSITION_PRECISION = 3
+
+
+# Path to IDL
+IDL_PATH = Path('./idl/zeta.json')
