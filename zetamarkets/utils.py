@@ -16,7 +16,7 @@ def default_commitment() -> Dict:
     }
 
 
-def get_vault(program_id, zeta_group):
+def get_vault(program_id: PublicKey, zeta_group: PublicKey):
     return solana.publickey.PublicKey.find_program_address(
         [bytes("vault", "utf-8"), bytes(zeta_group)], program_id
     )
@@ -42,7 +42,7 @@ def get_mint_authority(program_id: PublicKey):
 
 
 def get_serum_authority(program_id: PublicKey):
-    return solana.publickey.PublicKey.find_program_address(
+    return PublicKey.find_program_address(
         [bytes("serum", "utf-8")], program_id
     )
 
@@ -64,7 +64,7 @@ def get_zeta_group(
     _type_
             _description_
     """
-    return solana.publickey.PublicKey.find_program_address(
+    return PublicKey.find_program_address(
         [bytes("zeta-group", "utf-8"), mint], program_id
     )
 
@@ -72,13 +72,26 @@ def get_zeta_group(
 def get_zeta_vault(program_id: PublicKey, mint: PublicKey):
     pass
 
+def get_zeta_insurance_vault(program_id: PublicKey, zeta_group_address: PublicKey):
+    return PublicKey.find_program_address(
+        [bytes("zeta-insurance-vault", "utf-8"), bytes(zeta_group_address)], program_id
+    )
+
+def get_socialized_loss_account(program_id: PublicKey, zeta_group_address: PublicKey):
+    return PublicKey.find_program_address(
+        [bytes("socialized-loss", "utf-8"), bytes(zeta_group_address)], program_id
+        )
+
+
+
+
 
 def get_user_white_list_deposit_account():
     pass
 
 
 def get_state(program_id):
-    return solana.publickey.PublicKey.find_program_address(
+    return PublicKey.find_program_address(
         [bytes("state", "utf-8")], program_id
     )
 

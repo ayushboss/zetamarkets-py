@@ -1,10 +1,11 @@
 import json
-from zetamarkets.constants import IDL_PATH
+from zetamarkets.constants import IDL_PATH, CLUSTER_URLS
 from zetamarkets.oracle import Oracle
 # from zetamarkets.risk import RiskCalculator
 from zetamarkets import utils,events
 from typing import Callable
 from anchorpy import Provider, Idl, Program
+from solana.publickey import PublicKey
 
 
 class ExchangeMeta(type):
@@ -65,7 +66,7 @@ class Exchange(metaclass=ExchangeMeta):
         return self._greeks
 
     @classmethod
-    def load(cls, program_id, network, connection, opts, wallet, throttle_ms):
+    async def load(cls, program_id: PublicKey, network, connection, opts, wallet, throttle_ms):
         print("Loading Exchange")
         exchange = Exchange(program_id, network, connection, wallet)
         if exchange.is_initialized:
@@ -80,11 +81,18 @@ class Exchange(metaclass=ExchangeMeta):
 
         # Load Zeta Group
         [underlying, _underlying_nonce] = utils.get_underlying(program_id, 0)
-
+        exchange._program.account.get('Underlying').provider.connection._provider.endpoint_uri = CLUSTER_URLS[network]
+        underlying_account = await exchange._program.account.get('Underlying').fetch(PublicKey(underlying))
+        # Provider not set
         [zeta_group, _zeta_group_nonce] = utils.get_zeta_group(program_id, underlying_account.mint)
-        # Check that zeta group is correct
-
         exchange._zeta_group_address = zeta_group
+
+        # exchange.subscribe_oracle(callback)
+        # await exchange.update_state()
+        await exchange.update_zeta_group()
+        [vault_address, _vault_nonce] = utils.get_vault(exchange._program.program_id, zeta_group)
+        [insurance_vault_address, _insurance_nonce_nonce] = utils.get_zeta_insurance_vault(exchange._program.program_id, exchange._zeta_group_address)
+
 
 
     async def _subscribe_oracle(self, callback: Callable):
@@ -100,3 +108,17 @@ class Exchange(metaclass=ExchangeMeta):
     def initialize_zetamarkets(self):
         # TODO: Add logic
         self._is_initialized = True
+
+    async def update_state(self):
+        """
+        Polls the on chain account to update state
+
+        """
+        self.state = await self._program.account.get('State').fetch(self.state_address)
+
+    async def update_zeta_group(self):
+        self._zeta_group = await self._program.account.get('ZetaGroup').fetch(self._zeta_group_address)
+        self.update_margin_params()
+
+    def update_margin_params(self):
+        raise("Not implemented")
