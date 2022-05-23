@@ -92,6 +92,9 @@ class Exchange(metaclass=ExchangeMeta):
         await exchange.update_zeta_group()
         [vault_address, _vault_nonce] = utils.get_vault(exchange._program.program_id, zeta_group)
         [insurance_vault_address, _insurance_nonce_nonce] = utils.get_zeta_insurance_vault(exchange._program.program_id, exchange._zeta_group_address)
+        self._vault_address = vault_address
+        self._insurance_vault_address = insurance_vault_address
+
 
 
 
@@ -121,4 +124,18 @@ class Exchange(metaclass=ExchangeMeta):
         self.update_margin_params()
 
     def update_margin_params(self):
-        raise("Not implemented")
+        if self._zeta_group is None:
+            return
+        self._margin_params = {
+            "futureMarginInitial": self._zeta_group.margin_parameters.future_margin_initial,
+            "futureMarginMaintenance":  self._zeta_group.margin_parameters.future_margin_maintenance,
+            "optionMarkPercentageLongInitial": self._zeta_group.margin_parameters.option_mark_percentage_long_initial,
+            "optionSpotPercentageLongInitial": self._zeta_group.margin_parameters.option_spot_percentage_long_initial,
+            "optionSpotPercentageShortInitial": self._zeta_group.margin_parameters.option_spot_percentage_short_initial,
+            "optionDynamicPercentageShortInitial": self._zeta_group.margin_parameters.option_dynamic_percentage_short_initial,
+            "optionMarkPercentageLongMaintenance": self._zeta_group.margin_parameters.option_spot_percentage_short_maintenance,
+            "optionSpotPercentageLongMaintenance": self._zeta_group.margin_parameters.option_spot_percentage_long_maintenance,
+            "optionSpotPercentageShortMaintenance": self._zeta_group.margin_parameters.option_spot_percentage_short_maintenance,
+            "optionDynamicPercentageShortMaintenance": self._zeta_group.margin_parameters.option_dynamic_percentage_short_maintenance,
+            "optionShortPutCapPercentage": self._zeta_group.margin_parameters.option_short_put_cap_percentage
+        }
