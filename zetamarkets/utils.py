@@ -4,7 +4,7 @@ from decimal import Decimal
 import math
 from typing import Dict
 from zetamarkets import exchange
-from zetamarkets.constants import IDL_PATH
+from zetamarkets.constants import IDL_PATH, PLATFORM_PRECISION
 from solana.publickey import PublicKey
 
 
@@ -173,3 +173,4 @@ def get_underlying(program_id: PublicKey, underlying_index: int):
         ],
         program_id
     )
+

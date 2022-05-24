@@ -92,8 +92,12 @@ class Exchange(metaclass=ExchangeMeta):
         await exchange.update_zeta_group()
         [vault_address, _vault_nonce] = utils.get_vault(exchange._program.program_id, zeta_group)
         [insurance_vault_address, _insurance_nonce_nonce] = utils.get_zeta_insurance_vault(exchange._program.program_id, exchange._zeta_group_address)
-        self._vault_address = vault_address
-        self._insurance_vault_address = insurance_vault_address
+        exchange._vault_address = vault_address
+        exchange._insurance_vault_address = insurance_vault_address
+        [greeks, _greeks_nonce] = utils.get_greeks(exchange._program.program_id, exchange._zeta_group_address)
+        exchange._greeks_address = greeks
+        # exchange._markets = ZetaGroupMarkets.load(opts, throttle_ms)
+        exchange._greeks = await exchange._program.account.get('Greeks').fetch(greeks)
 
 
 
@@ -139,3 +143,6 @@ class Exchange(metaclass=ExchangeMeta):
             "optionDynamicPercentageShortMaintenance": self._zeta_group.margin_parameters.option_dynamic_percentage_short_maintenance,
             "optionShortPutCapPercentage": self._zeta_group.margin_parameters.option_short_put_cap_percentage
         }
+
+    def get_mark_price(self, index: int) -> int:
+        return self._greeks.mark_prices[index]
