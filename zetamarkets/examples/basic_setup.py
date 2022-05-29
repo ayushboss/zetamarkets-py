@@ -48,14 +48,22 @@ import json
 #         headers={"Content-Type": "application/json"},
 #     )
 #     print(res)
-PROGRAM_ID = "BG3oRikW8d16YjUEmX3ZxHm9SiJzrGtMhsSR8aCw1Cd7"
+PROGRAM_ID = PublicKey("BG3oRikW8d16YjUEmX3ZxHm9SiJzrGtMhsSR8aCw1Cd7")
 # Fill this ins
 conn = AsyncClient(NETWORK_URL)
 print(utils.default_commitment())
-Exchange.load(PROGRAM_ID, "devnet", conn, utils.default_commitment(), None, 0)
+DEVNET_PRICE_FEED= PublicKey("J83w4HKfqxwcq3BEMMkPFSppX3gqekLyLJBexebFVkix")
+
+async def main():
+    exc = Exchange("","","","")
+    await exc.load(PROGRAM_ID, "devnet", conn, utils.default_commitment(), None, 0)
+    print(exc.oracle.get_available_price_feeds())
+    print(await exc.oracle.get_price())
+    # print(f"Mark price for Market 1 on devnet is: {exc.get_mark_price(1)}")
 
 
-print("stuff")
+asyncio.run(main())
+
 # // USDC faucet - Mint $10,000 USDC (Note USDC is fake on devnet)
 # async def main():
 

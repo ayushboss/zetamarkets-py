@@ -1,5 +1,8 @@
+import atexit
+import asyncio
 from zetamarkets import constants
-
+from pythclient.pythaccounts import PythPriceAccount, PythPriceStatus
+from pythclient.solana import SolanaClient, SolanaPublicKey, SOLANA_DEVNET_HTTP_ENDPOINT, SOLANA_DEVNET_WS_ENDPOINT, SOLANA_TESTNET_HTTP_ENDPOINT, SOLANA_TESTNET_WS_ENDPOINT, SOLANA_MAINNET_HTTP_ENDPOINT, SOLANA_MAINNET_WS_ENDPOINT
 
 class Oracle:
     def __init__(self, network, connection):
@@ -8,47 +11,24 @@ class Oracle:
         self._subscription_ids = {}
         self._data = {}
         self._callback = None
+        if self._network ==  "testnet":
+            self._solana_client = SolanaClient(endpoint=SOLANA_TESTNET_HTTP_ENDPOINT, ws_endpoint=SOLANA_TESTNET_WS_ENDPOINT)
+        elif self._network == "devnet":
+            self._solana_client = SolanaClient(endpoint=SOLANA_DEVNET_HTTP_ENDPOINT, ws_endpoint=SOLANA_DEVNET_WS_ENDPOINT)
+        elif self._network == "mainnet":
+            self._solana_client = SolanaClient(endpoint=SOLANA_MAINNET_HTTP_ENDPOINT, ws_endpoint=SOLANA_MAINNET_WS_ENDPOINT)
+        pyth_account_key = SolanaPublicKey(str(constants.PYTH_PRICE_FEEDS[self._network].get("SOL/USD")))
+        self._price = PythPriceAccount(pyth_account_key, self._solana_client)
+        # https://docs.python.org/3/library/atexit.html#atexit.register
+        # atexit.register(lambda: asyncio.get_event_loop().run_until_complete(self._solana_client.close()))
 
     def get_available_price_feeds(self):
         return constants.PYTH_PRICE_FEEDS[self._network].keys()
 
-    def get_price(self, feed):
-        if not feed in self._data:
-            return None
-        return self._data.get(feed)
-
-    def fetch_price(self, oracle_key):
-        # TODO parse account_info.data
-        account_info = self._connection.get_account_info(oracle_key)
-        price_data = account_info.data
-        return price_data.price
-
-    def subscribe_price_feeds(self, callback):
-        if self._callback is not None:
-            raise ("Oracle price feeds already subscribed to!")
-        self._callback = callback
-        feeds = constants.PYTH_PRICE_FEEDS[self._network].keys()
-        for i in range(len(feeds)):
-            feed = feeds[i]
-            print(f"Oracle subscribing to feed {feed}")
-            price_address = constants.PYTH_PRICE_FEEDS[self._network][feed]
-
-            def on_account_change_fn(account_info, _context):
-                # TODO parse price data
-                price_data = account_info.data
-                curr_price = self._data.get(feed)
-                if curr_price is not None and curr_price.price == price_data.price:
-                    return
-                oracle_data = {"feed": feed, "price": price_data.price}
-                self._data[feed] = oracle_data
-                self._callback(oracle_data)
-                # Convert logic
-                # Exchange.provider.connection.commitment
-
-            # subscription_id = self._connection.on_account_change(price_address, on_account_change_fn)
-
-            # self._subscription_ids[feed] = subscription_id
-            # account_info =  self._connection.get_account_info(price_address)
-            # price_data = parse_pyth_data(account_info.data);
-            # oracle_data = {"feed": feed, "price": price_data.price}
-            self._data[feed] = oracle_data
+    async def get_price(self):
+        await self._price.update()
+        price_status = self._price.aggregate_price_status
+        if price_status == PythPriceStatus.TRADING:
+            return self._price.aggregate_price
+        else:
+            print("Price is not valid now. Status is", price_status)
