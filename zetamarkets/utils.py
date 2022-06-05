@@ -116,9 +116,19 @@ def convert_native_lot_size_to_decimal(amount):
 def convert_decimal_to_native_integer(amount):
     return Decimal(amount)
 
+def get_most_recent_expired_index():
+    if exchange.markets.front_expiry_index - 1 < 0:
+        return constants.ACTIVE_EXPIRIES -1
+    else:
+        return exchange.markets.front_expiry_index - 1
 
 def display_state():
-    print(exchange.Exchange().zetagroup)
+    ordered_indexes = [
+        exchange._zeta_group.front_expiry_index,
+        get_most_recent_expired_index()
+
+    ]
+    print("[EXCHANGE] Display market state...")
 
 
 def get_margin_account(program_id: PublicKey, zeta_group: PublicKey, user_key: PublicKey):
@@ -174,3 +184,6 @@ def get_underlying(program_id: PublicKey, underlying_index: int):
         program_id
     )
 
+def process_transaction(provider, tx, signers=None, opts=None):
+    # TODO: Implement this
+    pass

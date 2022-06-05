@@ -79,3 +79,14 @@ Complete basic example
 
 
 
+## Check market mark price
+
+This is the price that position is marked to - (This is calculated by our on chain black scholes pricing that is constantly being cranked.)
+
+``` python
+# Use the market index you wish to check.
+print(exchange.get_mark_price(index));
+# The fair price of this option is $8.202024.
+`8.202024`;
+
+```

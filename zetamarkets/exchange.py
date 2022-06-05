@@ -96,7 +96,7 @@ class Exchange(metaclass=ExchangeMeta):
         exchange._insurance_vault_address = insurance_vault_address
         [greeks, _greeks_nonce] = utils.get_greeks(exchange._program.program_id, exchange._zeta_group_address)
         exchange._greeks_address = greeks
-        # exchange._markets = ZetaGroupMarkets.load(opts, throttle_ms)
+        exchange._markets = ZetaGroupMarkets.load(opts, throttle_ms)
         exchange._greeks = await exchange._program.account.get('Greeks').fetch(greeks)
 
 
