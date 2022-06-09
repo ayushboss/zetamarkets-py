@@ -27,7 +27,7 @@ echo private_key=`cat bot-key.json` >> .env
 - [ ] Display Exchange State
 - [ ] User Margin Accounts
 - [ ] Trade and View positions
-- [ ] Check Market Mark Price
+- [x] Check Market Mark Price
 - [ ] Calculate User Margin Account State
 - [ ] Callbacks and State tracking
 - [ ] Native Polling
