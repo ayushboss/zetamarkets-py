@@ -1,7 +1,12 @@
 from solana.publickey import PublicKey
 from pathlib import Path
 
-MINTS = {"SOL": PublicKey("So11111111111111111111111111111111111111112")}
+# MINTS = {"SOL": PublicKey("So11111111111111111111111111111111111111112")}
+MINTS = {
+    "SOL": PublicKey("So11111111111111111111111111111111111111112"),
+    "BTC": PublicKey("qfnqNqs3nCAHjnyCgLRDbBtq4p2MtHZxw8YjSyYhPoL"),
+    "ETH": PublicKey("FeGn77dhg1KXRRFeSwwMiykZnZPw5JXW6naf2aQgZDQf")
+}
 UNDERLYINGS = [MINTS["SOL"]]
 
 DEX_PID = {
