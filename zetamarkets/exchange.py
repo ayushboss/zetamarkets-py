@@ -28,6 +28,7 @@ class Exchange(metaclass=ExchangeMeta):
     _state = None
     _serum_authority = None
     _instance = None
+    program_id = None
     is_initialized = False
 
     def __init__(self, program_id, network, connection, wallet):
@@ -43,7 +44,7 @@ class Exchange(metaclass=ExchangeMeta):
         idl = Idl.from_json(raw_idl)
         self._program = Program(idl, program_id)
         # self._risk_calculator = RiskCalculator()
-
+        self._program_id = program_id
         self._last_poll_timestamp = 0
         self._zetagroup = None
         self._state_address = None
