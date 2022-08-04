@@ -183,7 +183,7 @@ class SubExchange:
         )
         try:
             await utils.process_transaction(
-                Exchange.get_mark_price,
+                Exchange.get_mark_price(),
                 tx,
                 [],
                 utils.default_commitment(),
