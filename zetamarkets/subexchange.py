@@ -115,7 +115,7 @@ class SubExchange:
         
         self.__markets = await ZetaGroupMarkets.load(self.__asset, opts, throttleMs)
         
-        ### WE NEED TO FIGURE OUT THE ANCHOR PROGRAM THROUGH THE EXCHANGE CLASS AND THEN COME BACK
+        ### TODO: WE NEED TO FIGURE OUT THE ANCHOR PROGRAM THROUGH THE EXCHANGE CLASS AND THEN COME BACK
         # self.__greeks = await Exchange.progra 
         Exchange.risk_calculator.update_margin_requirements(self.__asset)
 

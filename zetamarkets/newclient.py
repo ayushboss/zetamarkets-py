@@ -177,7 +177,7 @@ class Client:
             print("Resetting existing timer to " + str(timer_interval) + " seconds")
             clear_interval(this._poll_interval_id)
         
-        ### NEED SOME SORT OF SET INTERVAL THING EQUIVALENT
+        ### TODO: NEED SOME SORT OF SET INTERVAL THING EQUIVALENT
     def market_identifier_to_public_key(asset, market):
         market_pubkey = None
         if isinstance(market, int):
