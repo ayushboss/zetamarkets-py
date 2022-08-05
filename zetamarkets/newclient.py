@@ -137,14 +137,14 @@ class Client:
             print("An error occurred while forming the referrer accounts")
         
         try:
-            referral_account_address, _nonce = await utils.get_referral_account_address(
+            referral_account_address_loc, _nonce = await utils.get_referral_account_address(
                 Exchange.program_id,
                 self.public_key()
             )
 
-            self._referral_account_address = referral_account_address
+            self._referral_account_address = referral_account_address_loc
             self._referral_account = await Exchange.program.account.referralAccount.fetch(
-                referral_account_address
+                referral_account_address_loc
             )
 
             print("User has been referred by " + str(self._referral_account))
