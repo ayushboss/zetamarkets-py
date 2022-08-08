@@ -34,7 +34,7 @@ async def initialize_insurance_deposit_account_ix(asset, user_key, user_whitelis
         user_key
     )
 
-    return initialize_insurance_deposit_account(nonce, {
+    return initialize_insurance_deposit_account({"nonce": nonce}, {
         "zeta_group": sub_exchange.zeta_group_address,
         "insurance_deposit_account": insurance_deposit_account,
         "authority": user_key,
@@ -53,7 +53,7 @@ async def deposit_ix(asset, amount, margin_account, usdc_account, user_key, whit
     
     sub_exchange = Exchange.get_sub_exchange(asset)
 
-    return deposit(amount, {
+    return deposit({"amount": amount}, {
         "zeta_group": sub_exchange.zeta_group_address,
         "margin_account": margin_account,
         "vault": sub_exchange.vault_address,
@@ -68,7 +68,7 @@ async def deposit_ix(asset, amount, margin_account, usdc_account, user_key, whit
 def deposit_insurance_vault_ix(asset, amount, insurance_deposit_account, usdc_account, user_key):
     sub_exchange = Exchange.get_sub_exchange(asset)
     return deposit_insurance_vault(
-        amount,
+        {"amount": amount},
         {
             "zeta_group": sub_exchange.zeta_group_address,
             "insurance_vault": sub_exchange.insurance_vault_address,
@@ -84,7 +84,7 @@ def deposit_insurance_vault_ix(asset, amount, insurance_deposit_account, usdc_ac
 def withdraw_insurance_vault_ix(asset, percentage_amount, insurance_deposit_account, usdc_account, user_key):
     sub_exchange = Exchange.get_sub_exchange(asset)
     return withdraw_insurance_vault(
-        percentage_amount,
+        {"percentage_amount": percentage_amount},
         {
             "zeta_group": sub_exchange.zeta_group_address,
             "insurance_vault": sub_exchange.insurance_vault_address,
@@ -98,7 +98,7 @@ def withdraw_insurance_vault_ix(asset, percentage_amount, insurance_deposit_acco
 def withdraw_ix(asset, amount, margin_account, usdc_account, user_key):
     sub_exchange = Exchange.get_sub_exchange(asset)
     return withdraw(
-        amount,
+        {"amount": amount},
         {
             "state": Exchange.state_address,
             "zeta_group": sub_exchange.zeta_group_address,
@@ -149,7 +149,7 @@ async def close_open_orders_ix(asset, market, user_key, margin_account, open_ord
         open_orders
     )
 
-    return close_open_orders(open_orders_map_nonce,
+    return close_open_orders({"map_nonce": open_orders_map_nonce},
         {
             "state": Exchange.state_address,
             "zeta_group": Exchange.get_zeta_group_address(asset),
@@ -175,10 +175,12 @@ def place_order_ix(asset, market_index, price, size, side, client_order_id, marg
         }]
     
     return place_order(
-        price,
-        size,
-        types.to_program_side(side),
-        None if client_order_id == 0 else client_order_id,
+        {
+            "price": price,
+            "size": size,
+            "side": types.to_program_side(side),
+            "client_order_id": None if client_order_id == 0 else client_order_id,
+        },
         {
             "state": Exchange.state_address,
             "zeta_group": sub_exchange.zeta_group_address,
@@ -207,7 +209,7 @@ def place_order_ix(asset, market_index, price, size, side, client_order_id, marg
             "market_mint": market_data.serum_market.quote_mint_address if side == types.Side.BID else market_data.serum_market.base_mint_address,
             "mint_authority": Exchange._mint_authority
         },
-        remaining_accounts
+        # remaining_accounts
     )
 
 def initialize_zeta_state_ix(state_address, state_nonce, serum_authority, treasury_wallet, serum_nonce, mint_authority, mint_authority_nonce, params):
@@ -315,14 +317,14 @@ async def intialize_zeta_group_ix(asset, underlying_mint, oracle, pricing_args, 
     )
 
 def update_zeta_state_ix(params, admin):
-    return update_zeta_state(params, {
+    return update_zeta_state({"args": params}, {
         {
             "state": Exchange.state_address,
             "admin": admin
         }
     })
 
-async def initialize_referrer_alias(referrer, alias):
+async def initialize_referrer_alias_ix(referrer, alias):
     referrer_account = await utils.get_referrer_account_address(
         Exchange.program.program_id,
         referrer
@@ -333,11 +335,388 @@ async def initialize_referrer_alias(referrer, alias):
         alias
     );
 
-    return initialize_referrer_alias(alias, {
+    return initialize_referrer_alias({"alias": alias}, {
         {
             "referrer": referrer,
             "referrer_alias": referrer_alias,
             "referrer_account": referrer_account,
             "system_program": SYS_PROGRAM_ID,
         },
-    });
+    })
+
+def transfer_excess_spread_balance_ix(zeta_group, margin_account, spread_account, user):
+    return transfer_excess_spread_balance({
+        "zeta_group": zeta_group,
+        "margin_account": margin_account,
+        "spread_account": spread_account,
+        "authority": user,
+    })
+
+def close_spread_account_ix(zeta_group, spread_account, user):
+    return close_spread_account({
+        "zeta_group": zeta_group,
+        "spread_account": spread_account,
+        "authority": user,
+    })
+
+def place_order_v2_ix(asset, market_index, price, size, side, order_type, client_order_id, margin_account, authority, open_orders, whitelist_trading_fees_account):
+    sub_exchange = Exchange.get_sub_exchange(asset)    
+    market_data = sub_exchange.markets.markets[market_index]
+    remaining_accounts = [
+          {
+            "pubkey": whitelist_trading_fees_account,
+            "is_signer": False,
+            "is_writable": False,
+          },
+        ] if whitelist_trading_fees_account != None else []
+    
+    return place_order_v2(
+        {
+            "price": price,
+            "size": size,
+            "side": types.to_program_side(side),
+            "order_type": types.to_program_order_type(order_type),
+            "client_order_id": None if client_order_id == 0 else client_order_id,
+        },
+        {
+            "state": Exchange.state_address,
+            "zeta_group": sub_exchange.zeta_group_address,
+            "margin_account": margin_account,
+            "authority": authority,
+            "dex_program": constants.DEX_PID[Exchange.network],
+            "token_program": TOKEN_PROGRAM_ID,
+            "serum_authority": Exchange._serum_authority,
+            "greeks": sub_exchange.zeta_group.greeks,
+            "open_orders": open_orders,
+            "rent": SYSVAR_RENT_PUBKEY,
+            "market_accounts": {
+                "market": market_data.serum_market.decoded.own_address,
+                "request_queue": market_data.serum_market.decoded.request_queue,
+                "event_queue": market_data.serum_market.decoded.event_queue,
+                "bids": market_data.serum_market.decoded.bids,
+                "asks": market_data.serum_market.decoded.asks,
+                "coin_vault": market_data.serum_market.decoded.base_vault,
+                "pc_vault": market_data.serum_market.decoded.quote_vault,
+                "order_payer_token_account": market_data.quote_vault if side == types.Side.BID else market_data.base_vault,
+                "coin_wallet": market_data.base_vault,
+                "pc_wallet": market_data.quote_vault,
+            },
+            "oracle": sub_exchange.zeta_group.oracle,
+            "market_node": sub_exchange.greeks.node_keys[market_index],
+            "market_mint": market_data.serum_market.quote_mint_address if side == types.Side.BID else market_data.serum_market.base_mint_address,
+            "mint_authority": Exchange._mint_authority,
+        }
+    )
+
+def place_order_v3_ix(asset, market_index, price, size, side, order_type, client_order_id, tag, margin_account, authority, open_orders, whitelist_trading_fees_account):
+    if len(tag) > constants.MAX_ORDER_TAG_LENGTH:
+        raise Exception("Tag is too long! Max length = " + str(constants.MAX_ORDER_TAG_LENGTH))
+    
+    sub_exchange = Exchange.get_sub_exchange(asset)
+    market_data = sub_exchange.markets.markets[market_index]
+    remaining_accounts = [
+          {
+            "pubkey": whitelist_trading_fees_account,
+            "is_signer": False,
+            "is_writable": False,
+          },
+        ] if whitelist_trading_fees_account == None else []
+    
+    return place_order_v3(
+        {
+            "price": price,
+            "size": size,
+            "side": types.to_program_side(side),
+            "order_type": types.to_program_order_type(order_type),
+            "client_order_id": None if client_order_id == 0 else client_order_id,
+        },
+        {
+            "state": Exchange.state_address,
+            "zeta_group": sub_exchange.zeta_group_address,
+            "margin_account": margin_account,
+            "authority": authority,
+            "dex_program": constants.DEX_PID[Exchange.network],
+            "token_program": TOKEN_PROGRAM_ID,
+            "serum_authority": Exchange._serum_authority,
+            "greeks": sub_exchange.zeta_group.greeks,
+            "open_orders": open_orders,
+            "rent": SYSVAR_RENT_PUBKEY,
+            "market_accounts": {
+                "market": market_data.serum_market.decoded.own_address,
+                "request_queue": market_data.serum_market.decoded.request_queue,
+                "event_queue": market_data.serum_market.decoded.event_queue,
+                "bids": market_data.serum_market.decoded.bids,
+                "asks": market_data.serum_market.decoded.asks,
+                "coin_vault": market_data.serum_market.decoded.base_vault,
+                "pc_vault": market_data.serum_market.decoded.quote_vault,
+                "order_payer_token_account": market_data.quote_vault if types.Side.BID else market_data.base_vault,
+                "coin_wallet": market_data.base_vault,
+                "pc_wallet": market_data.quote_vault,
+            },
+            "oracle": sub_exchange.zeta_group.oracle,
+            "market_node": sub_exchange.greeks.node_keys[market_index],
+            "market_mint": market_data.serum_market.quote_mint_address if side == types.Side.BID else market_data.serum_market.base_mint_address,
+            "mint_authority": Exchange._mint_authority,
+        }
+    )
+
+def initialize_spread_account_ix(zeta_group, spread_account, user):
+    return initialize_spread_account({
+        "zeta_group": zeta_group,
+        "spread_account": spread_account,
+        "authority": user,
+        "payer": user,
+        "zeta_program": Exchange.program_id,
+        'system_program': SYS_PROGRAM_ID,
+    })
+
+def position_movement_ix(zeta_group, margin_account, spread_account, user, greeks, oracle, movement_type, movements):
+    return position_movement(
+        {
+            "movement_type": types.to_program_movement_type(movement_type),
+            "movements": movements
+        },
+        {
+            "state": Exchange.state_address,
+            "zeta_group": zeta_group,
+            "margin_account": margin_account,
+            "spread_account": spread_account,
+            "authority": user,
+            "greeks": greeks,
+            "oracle": oracle,            
+        }
+    )
+
+def cancel_order_ix(asset, market_index, user_key, margin_account, open_orders, order_id, side):
+    sub_exchange = Exchange.get_sub_exchange(asset)
+    market_data = sub_exchange.markets.markets[market_index]
+
+    return cancel_order(
+        {
+            "side": types.to_program_side(side),
+            "order_id": order_id
+        },
+        {
+            "authority": user_key,
+            "cancel_accounts": {
+                "zeta_group": sub_exchange.zeta_group_address,
+                "state": Exchange.state_address,
+                "margin_account": margin_account,
+                "dex_program": constants.DEX_PID[Exchange.network],
+                "serum_authority": Exchange._serum_authority,
+                "open_orders": open_orders,
+                "market": market_data.address,
+                "bids": market_data.serum_market.decoded.bids,
+                "asks": market_data.serum_market.decoded.asks,
+                "event_queue": market_data.serum_market.decoded.event_queue,
+            }
+        }
+    )
+
+def cancel_order_no_error_ix(asset, market_index, user_key, margin_account, open_orders, order_id, side):
+    sub_exchange = Exchange.get_sub_exchange(asset)
+    market_data = sub_exchange.markets.markets[market_index]
+
+    return cancel_order_no_error(
+        {
+            "side": types.to_program_side(side),
+            "order_id": order_id
+        },
+        {
+            "authority": user_key,
+            "cancel_accounts": {
+                "zeta_group": sub_exchange.zeta_group_address,
+                "state": Exchange.state_address,
+                "margin_account": margin_account,
+                "dex_program": constants.DEX_PID[Exchange.network],
+                "serum_authority": Exchange._serum_authority,
+                "open_orders": open_orders,
+                "market": market_data.address,
+                "bids": market_data.serum_market.decoded.bids,
+                "asks": market_data.serum_market.decoded.asks,
+                "event_queue": market_data.serum_market.decoded.event_queue,
+            },            
+        }
+    )
+
+def cancel_order_by_client_order_id_ix(asset, market_index, user_key, margin_account, open_orders, client_order_id):
+    sub_exchange = Exchange.get_sub_exchange(asset)
+    market_data = sub_exchange.markets.markets[market_index]
+
+    return cancel_order_by_client_order_id(
+        {
+            "client_order_id": client_order_id
+        },
+        {
+            "authority": user_key,
+            "cancel_accounts": {
+                "zeta_group": sub_exchange.zeta_group_address,
+                "state": Exchange.state_address,
+                "margin_account": margin_account,
+                "dex_program": constants.DEX_PID[Exchange.network],
+                "serum_authority": Exchange._serum_authority,
+                "open_orders": open_orders,
+                "market": market_data.address,
+                "bids": market_data.serum_market.decoded.bids,
+                "asks": market_data.serum_market.decoded.asks,
+                "event_queue": market_data.serum_market.decoded.event_queue,
+            },            
+        }
+    )
+
+def cancel_order_by_client_order_id_no_error_ix(asset, market_index, user_key, margin_account, open_orders, client_order_id):
+    sub_exchange = Exchange.get_sub_exchange(asset)
+    market_data = sub_exchange.markets.markets[market_index]
+
+    return cancel_order_by_client_order_id_no_error(
+        {
+            "client_order_id": client_order_id
+        },
+        {
+            "authority": user_key,
+            "cancel_accounts": {
+                "zeta_group": sub_exchange.zeta_group_address,
+                "state": Exchange.state_address,
+                "margin_account": margin_account,
+                "dex_program": constants.DEX_PID[Exchange.network],
+                "serum_authority": Exchange._serum_authority,
+                "open_orders": open_orders,
+                "market": market_data.address,
+                "bids": market_data.serum_market.decoded.bids,
+                "asks": market_data.serum_market.decoded.asks,
+                "event_queue": market_data.serum_market.decoded.event_queue,
+            },            
+        }
+    )
+
+def settle_dex_funds_ix(asset, market_key, vault_owner, open_orders):
+    market = Exchange.get_sub_exchange(asset).markets.get_market(market_key)
+    return settle_dex_funds({
+        "state": Exchange.state_address,
+        "market": market.address,
+        "zeta_base_vault": market.base_vault,
+        "zeta_quote_vault": market.quote_vault,
+        "dex_base_vault": market.serum_market.decoded.base_vault,
+        "dex_quote_vault": market.serum_market.decoded.quote_vault,
+        "vault_owner": vault_owner,
+        "mint_authority": Exchange._mint_authority,
+        "serum_authority": Exchange._serum_authority,
+        "dex_program": constants.DEX_PID[Exchange.network],
+        "token_program": TOKEN_PROGRAM_ID,
+    })
+
+def force_cancel_orders_ix(asset, market_index, margin_account, open_orders):
+    sub_exchange = Exchange.get_sub_exchange(asset)
+    market_data = sub_exchange.markets.markets[market_index]
+
+    return force_cancel_orders(
+        {
+            "greeks": sub_exchange.zeta_group.greeks,
+            "oracle": sub_exchange.zeta_group.oracle,
+            "cancel_accounts": {
+                "zeta_group": sub_exchange.zeta_group_address,
+                "state": Exchange.state_address,
+                "margin_account": margin_account,
+                "dex_program": constants.DEX_PID[Exchange.network],
+                "serum_authority": Exchange._serum_authority,
+                "open_orders": open_orders,
+                "market": market_data.address,
+                "bids": market_data.serum_market.decoded.bids,
+                "asks": market_data.serum_market.decoded.asks,
+                "event_queue": market_data.serum_market.decoded.event_queue,
+            },            
+        }
+    )
+
+def liquidate_ix(asset, liquidator, liquidator_margin_account, market, liquidated_margin_account, size):
+    sub_exchange = Exchange.get_sub_exchange(asset)
+    return liquidate(
+        {
+            "size": size
+        },
+        {
+            "state": Exchange.state_address,
+            "liquidator": liquidator,
+            "liquidator_margin_account": liquidator_margin_account,
+            "greeks": sub_exchange.zeta_group.greeks,
+            "oracle": sub_exchange.zeta_group.oracle,
+            "market": market,
+            "zeta_group": sub_exchange.zeta_group_address,
+            "liquidated_margin_account": liquidated_margin_account,
+        }
+    )
+
+async def initialize_market_node_ix(asset, index):
+    sub_exchange = Exchange.get_sub_exchange(asset)
+    market_node, nonce = await utils.get_market_node(
+        Exchange.program_id,
+        sub_exchange.zeta_group_address,
+        index
+    )
+
+    return initialize_market_node(
+        {
+            "args": {
+                "nonce": nonce,
+                "index": index
+            }
+        },
+        {
+            "zeta_group": sub_exchange.zeta_group_address,
+            "market_node": market_node,
+            "greeks": sub_exchange.greeks_address,
+            "payer": Exchange.provider.wallet.publicKey,
+            "system_program": SYS_PROGRAM_ID,
+        }
+    )
+
+def update_pricing_parameters_ix(asset, args, admin):
+    sub_exchange = Exchange.get_sub_exchange(asset)
+    return update_pricing_parameters({"args": args},
+        {
+            "state": Exchange.state_address,
+            "zeta_group": Exchange.get_zeta_group_address(asset),
+            "admin": admin
+        }
+    )
+
+def update_margin_parameters_ix(asset, args, admin):
+    sub_exchange = Exchange.get_sub_exchange(asset)
+    return update_margin_parameters({"args": args},
+        {
+            "state": Exchange.state_address,
+            "zeta_group": Exchange.get_zeta_group_address(asset),
+            "admin": admin
+        }
+    )
+
+def update_volatility_nodes_ix(asset, nodes, admin):
+    sub_exchange = Exchange.get_sub_exchange(asset)
+    return update_volatility_nodes({"nodes": nodes},
+        {
+            "state": Exchange.state_address,
+            "zeta_group": sub_exchange.zeta_group_address,
+            "greeks": sub_exchange.greeks_address,
+            "admin": admin,
+        }
+    )
+
+def initialize_market_indexes_ix(asset, market_indexes, nonce):
+    return initialize_market_indexes(
+        {
+            "nonce": nonce,
+        },
+        {
+            "state": Exchange.state_address,
+            "market_indexes": market_indexes,
+            "admin": Exchange.state.admin,
+            "system_program": SYS_PROGRAM_ID,
+            "zeta_group": Exchange.get_zeta_group_address(asset),            
+        }
+    )
+
+def add_market_indexes_ix(asset, market_indexes):
+    return add_market_indexes({
+        "market_indexes": market_indexes,
+        "zeta_group": Exchange.get_zeta_group_address(asset)
+    })
