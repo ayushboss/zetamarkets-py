@@ -1,13 +1,19 @@
 import json
+
+from httpx import AsyncClient
+from zetamarkets.assets import Asset
 from zetamarkets.constants import IDL_PATH, CLUSTER_URLS
 import constants
 from zetamarkets.oracle import Oracle
 # from zetamarkets.risk import RiskCalculator
 from zetamarkets import utils,events
-from typing import Callable
-from anchorpy import Provider, Idl, Program
+from typing import Callable, List
+from anchorpy import Provider, Idl, Program, Wallet
 from solana.publickey import PublicKey
 from solana.transaction import Transaction
+from subexchange import SubExchange
+import program_instructions as instructions
+import network as Network
 
 class ExchangeMeta(type):
 
@@ -32,6 +38,7 @@ class Exchange(metaclass=ExchangeMeta):
     program_id = None
     is_initialized = False
     _is_setup = True
+    provider: Provider = None
     
     @property
     def oracle(self):
@@ -53,6 +60,18 @@ class Exchange(metaclass=ExchangeMeta):
     def use_ledger(self):
         return self._use_ledger
     
+    @property
+    def assets(self):
+        return self._assets
+    
+    @property
+    def network(self):
+        return self._network
+    
+    @property
+    def opts(self):
+        return self._opts
+    
     _use_ledger = False
 
     def set_ledger_wallet(self, wallet):
@@ -63,7 +82,7 @@ class Exchange(metaclass=ExchangeMeta):
         # TODO: Come back to this later and see if relevant
         pass
 
-    async def _init(self, program_id, network, connection, wallet, opts, assets):
+    async def _init(self, program_id: PublicKey, network: Network, connection: AsyncClient, wallet: Wallet, opts, assets: list[Asset]):
         self._provider = Provider(connection, wallet, opts)
         self._network = network
         self._oracle = Oracle(self._network, connection)
@@ -80,6 +99,8 @@ class Exchange(metaclass=ExchangeMeta):
         self._is_initialized = False
         self._assets = assets
         self._opts = opts
+        self._sub_exchanges: list[SubExchange] = []
+        self._markets = []
         for asset in assets:
             await self.add_sub_exchange(asset, SubExchange())
             await self.get_sub_exchange(asset).initialize(asset)
@@ -203,10 +224,10 @@ class Exchange(metaclass=ExchangeMeta):
 
         self._is_initialized = True
     
-    async def add_sub_exchyange(self, asset, sub_exchange):
+    async def add_sub_exchange(self, asset, sub_exchange):
         self._sub_exchanges[asset] = sub_exchange
     
-    def get_sub_exchange(self, asset):
+    def get_sub_exchange(self, asset: Asset) -> SubExchange:
         try:
             return self._sub_exchanges[asset]
         except:
@@ -256,7 +277,7 @@ class Exchange(metaclass=ExchangeMeta):
     
     async def update_zeta_state(self, params):
         tx = Transaction().add(
-            instructions.update_zeta_state_ix(params, self._provider.wallet.publicKey)
+            instructions.update_zeta_state_ix(params, self._provider.wallet.public_key)
         )
         await utils.process_transaction(self._provider, tx)
         await self.update_state()

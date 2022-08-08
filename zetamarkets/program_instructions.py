@@ -228,11 +228,11 @@ def initialize_zeta_state_ix(state_address, state_nonce, serum_authority, treasu
             "rent": SYSVAR_RENT_PUBKEY,
             "system_program": SYS_PROGRAM_ID,
             "usdc_mint": Exchange._usdc_mint_address,
-            "admin": Exchange.provider.wallet.publicKey
+            "admin": Exchange.provider.wallet.public_key
         }
     )
 
-async def intialize_zeta_group_ix(asset, underlying_mint, oracle, pricing_args, margin_args):
+async def initialize_zeta_group_ix(asset, underlying_mint, oracle, pricing_args, margin_args):
     zeta_group, zeta_group_nonce = await utils.get_zeta_group(
         Exchange.program_id,
         underlying_mint
@@ -665,7 +665,7 @@ async def initialize_market_node_ix(asset, index):
             "zeta_group": sub_exchange.zeta_group_address,
             "market_node": market_node,
             "greeks": sub_exchange.greeks_address,
-            "payer": Exchange.provider.wallet.publicKey,
+            "payer": Exchange.provider.wallet.public_key,
             "system_program": SYS_PROGRAM_ID,
         }
     )

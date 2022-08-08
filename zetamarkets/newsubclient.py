@@ -9,6 +9,10 @@ from solana.publickey import PublicKey
 from solana.transaction import Transaction
 import constants
 import utils
+from zetamarkets.assets import Asset
+from zetamarkets.newclient import Client
+
+import solana
 
 class SubClient:
     @property
@@ -83,8 +87,9 @@ class SubClient:
         self._poll_interval = constants.DEFAULT_CLIENT_POLL_INTERVAL
         self._updating_state = False
         self._updating_state_timestamp = None
+        self._spread_account_address = None
     
-    async def load(self, asset, parent, connection, wallet, callback = None, throttle = False):
+    async def load(self, asset: Asset, parent: Client, connection, wallet: types.Wallet, callback = None, throttle: bool = False):
         subClient = SubClient(asset, parent)
         margin_account_address, _margin_account_nonce = await utils.get_margin_account(
             Exchange.program_id,
@@ -159,7 +164,8 @@ class SubClient:
                     self._callback(self.asset, EventType.USER, None)
             except:
                 raise Exception("Subclient poll update failed.")
-    def toggle_update_state(self, toggle_on):
+    
+    def toggle_update_state(self, toggle_on: bool):
         if toggle_on:
             self._updating_state = True
             self._updating_state_timestamp = datetime.now()
@@ -171,7 +177,7 @@ class SubClient:
         if self._updating_state and datetime.now() - self._updating_state_timestamp > constants.UPDATING_STATE_LIMIT_SECONDS:
             self.toggle_update_state(False)
     
-    async def update_state(self, fetch = True, force = False):
+    async def update_state(self, fetch: bool = True, force: bool = False):
         self.check_reset_updating_state()
         if self._updating_state and not force:
             return
@@ -204,7 +210,7 @@ class SubClient:
         
         self.toggle_update_state(False)
     
-    async def deposit(self, amount):
+    async def deposit(self, amount: int):
         tx = Transaction()
         if self._margin_account == None:
             print("User has no margin account. Creating margin account...")
@@ -268,7 +274,7 @@ class SubClient:
         self._spread_account = None
         return txId
     
-    async def withdraw(self, amount):
+    async def withdraw(self, amount: int):
         tx = Transaction()
         tx.add(
             instructions.withdraw_ix(
@@ -1030,6 +1036,18 @@ class SubClient:
         return indexes
     
     async def update_orders(self):
+        orders = []
+        sub_exchange = self._sub_exchange
+        for i in self.get_relevant_market_indexes():
+            await sub_exchange.markets.markets[i].update_orderbook()
+            orders.append(
+                sub_exchange.markets.markets[i].get_orders_for_account(
+                    self._open_orders_accounts[i]
+                )
+            )
+        self._orders = orders
+
+    async def update_margin_positions(self):
         positions = []
         for i in range(len(self._margin_account.product_ledgers)):
             if self._margin_account.product_ledgers[i].position.size.to_number() != 0:
@@ -1062,7 +1080,15 @@ class SubClient:
         self._spread_positions = positions
     
     ### TODO: NEED TO FINISH THIS FUNCTION
-    # async def update_open_orders_addresses(self):
+    async def update_open_order_addresses(self):
+        for index, product in enumerate(self._sub_exchange.zeta_group.products):
+            if self._margin_account.open_orders_nonce[index] != 0 and self._open_orders_accounts[index] == PublicKey("0"):
+                open_orders_pda, _open_orders_nonce = await utils.get_open_orders(
+                    Exchange.program_id,
+                    product.market,
+                    self._parent.public_key
+                )
+                self._open_orders_accounts[index] = open_orders_pda
 
     def assert_has_margin_account(self):
         if self.margin_account == None:

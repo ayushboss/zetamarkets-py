@@ -138,7 +138,7 @@ class SubExchange:
             instructions.update_pricing_parameters_ix(
                 self.getAsset(),
                 args,
-                Exchange.provider.wallet.publicKey
+                Exchange.provider.wallet.public_key
             )
         )
         await utils.process_transaction(Exchange.provider, tx)
@@ -149,21 +149,21 @@ class SubExchange:
             instructions.update_margin_parameters_ix(
                 self.getAsset(),
                 args,
-                Exchange.provider.wallet.publicKey
+                Exchange.provider.wallet.public_key
             )
         )
         await utils.process_transaction(Exchange.provider, tx)
         await self.update_zeta_group()
     
-    async def updateVolatilityNodes(nodes):
+    async def updateVolatilityNodes(self, nodes):
         if len(nodes) != constants.VOLATILITY_POINTS: 
             raise Exception("Invalid number of nodes. Expected " + str(constants.VOLATILITY_POINTS))
         
         tx = Transaction().add(
             instructions.update_volatility_nodes_ix(
-                self.getAsset(),
+                self.get_asset(),
                 nodes,
-                Exchange.provider.wallet.publicKey
+                Exchange.provider.wallet.public_key
             )
         )
         await utils.processTransaction(Exchange.provider, tx)

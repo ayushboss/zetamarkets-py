@@ -1,4 +1,5 @@
 from sqlite3 import SQLITE_DROP_TEMP_INDEX
+import program_instructions as instructions
 from program_instructions import initialize_margin_account_tx, deposit_ix
 from anchorpy.utils import get_token_account_info
 from solana.transaction import Transaction
@@ -25,7 +26,7 @@ class Client:
         return self._referral_account
     
     def referral_account_address(self):
-        return self._referralAccountAddress
+        return self._referral_account_address
 
     @property
     def referrer_account(self):
@@ -51,27 +52,29 @@ class Client:
     def subclients(self):
         return self._subclients
 
-    def __init__(self, connection, wallet, opts):
+    def __init__(self, connection, wallet: Wallet, opts):
         self._provider = Provider(connection, wallet, opts)
         self._subclients = {}
         self._referral_account = None
         self._referrer_account = None
         self._referrer_account = None
         self._whitelist_deposit_address = None
+        self._whitelist_trading_fees_address = None
         self._usdc_account_address = None
+        self._referral_alias = None
     
-    async def load(connection, wallet, opts, callback, throttle):
+    async def load(connection, wallet: Wallet, opts, callback, throttle):
         client = Client(connection, wallet, opts)
         client._usdc_account_address = await utils.get_associated_token_address(
             Exchange._usdc_mint_address,
-            wallet.publicKey
+            wallet.public_key
         )
 
         client._whitelist_deposit_address = None
         try:
             whitelist_deposit_address, _whitelist_trading_fees_nonce = await utils.get_user_white_list_deposit_account(
                 Exchange.program_id,
-                wallet.publicKey
+                wallet.public_key
             )
             ### TODO: REFACTOR THESE LINES
             await Exchange.program.account.whitelist_deposit_account.fetch(
@@ -86,7 +89,7 @@ class Client:
         try:
             whitelist_trading_fees_address, _whitelist_trading_fees_nonce = await utils.get_user_white_list_trading_fees_account(
                 Exchange.program_id,
-                wallet.publicKey
+                wallet.public_key
             )
             await Exchange.program.account.whitelist_trading_fees_account.fetch(
                 whitelist_trading_fees_address
@@ -96,7 +99,7 @@ class Client:
         except:
             print("An error occurred during the whitelisting trading fees process")
         
-        for asset in Exchange.assets:
+        for asset in Exchange._assets:
             subclient = await SubClient.load(
                 asset,
                 client,
@@ -116,10 +119,10 @@ class Client:
     def add_sub_client(self, asset, subclient):
         self._subclients[asset] = subclient
     
-    def get_sub_client(self, asset):
+    def get_sub_client(self, asset) -> SubClient:
         return self._subclients[asset]
     
-    def get_all_subclients(self):
+    def get_all_subclients(self) -> list[SubClient]:
         self._subclients.values()
     
     async def set_referral_data(self):
@@ -162,12 +165,12 @@ class Client:
         )
 
         try:
-            await Exchange.program.account.referrerAccount.fetch(referrerAccount)
+            await Exchange.program.account.referrerAccount.fetch(referrer_account)
         except:
             print("Error when trying to pull the referrer account")
         
         tx = Transaction().add(
-            await refer_user_ix(self.provider.wallet.publicKey, referrer)
+            await refer_user_ix(self.provider.wallet.public_key, referrer)
         )
         txId = await utils.process_transaction(self.provider, tx)
 
@@ -191,7 +194,7 @@ class Client:
         return market_pubkey
     
     async def place_order(self, asset, market, price, size, side, type, client_order_id, tag):
-        ret = await self.get_sub_client(asset).placeOrderV3(
+        ret = await self.get_sub_client(asset).place_order_v3(
             self.market_identifier_to_public_key(asset, market),
             price,
             size,
@@ -436,10 +439,10 @@ class Client:
         return self.get_sub_client(asset).spread_account_address
     
     def get_margin_account(self, asset):
-        return self.get_sub_client(asset).spread_margin_account
+        return self.get_sub_client(asset).margin_account
     
     def get_margin_account_address(self, asset):
-        return self.get_sub_client(asset).spread_margin_account_address
+        return self.get_sub_client(asset).margin_account_address
     
     async def initialize_referrer_alias(self, alias):
         if len(alias) > 15:

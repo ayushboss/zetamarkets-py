@@ -1,12 +1,13 @@
-from anchorpy import Idl, Program
+from anchorpy import Idl, Program, Provider
 import solana
 from decimal import Decimal
 import math
 from typing import Dict
-from zetamarkets import exchange
+from exchange import Exchange
 from zetamarkets.constants import IDL_PATH, PLATFORM_PRECISION
 from solana.publickey import PublicKey
-
+from solana.transaction import Transaction, TransactionSignature
+import solana.rpc.api
 
 def default_commitment() -> Dict:
     return {
@@ -184,6 +185,23 @@ def get_underlying(program_id: PublicKey, underlying_index: int):
         program_id
     )
 
-def process_transaction(provider, tx, signers=None, opts=None):
+async def process_transaction(provider: Provider, tx: Transaction, signers=None, opts=None, use_ledger=False):
     # TODO: Implement this
-    pass
+    txSig = TransactionSignature()
+    blockhash = await provider.connection.get_recent_blockhash()
+    tx.recent_blockhash = blockhash
+    tx.fee_payer = Exchange.ledger_wallet.public_key if use_ledger else provider.wallet.public_key
+    if signers == None:
+        signers = []
+    
+    for s in signers:
+        if s != None:
+            tx.sign_partial(s)
+    
+    if use_ledger:
+        tx = await Exchange.ledger_wallet.sign_transaction(tx)
+    else:
+        tx = await provider.wallet.sign_transaction(tx)
+    
+    try:
+        tx_sig = await solana.rpc.api.Client.send_raw_transaction(Exchange.client, tx.serialize(), opts)
