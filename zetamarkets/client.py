@@ -1,7 +1,9 @@
 from program_instructions import initialize_margin_account_tx, deposit_ix
 from anchorpy.utils import get_token_account_info
+from solana.publickey import PublicKey
 from solana.transaction import Transaction
 from anchorpy import Program, Provider, Wallet
+from exchange import Exchange
 
 
 class Client:

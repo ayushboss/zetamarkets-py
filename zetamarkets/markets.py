@@ -1,6 +1,7 @@
 import math
 from zetamarkets.constants import NUM_STRIKES
 from zetamarkets.types import Kind
+from exchange import Exchange
 
 class ZetaGroupMarkets:
 
@@ -13,7 +14,7 @@ class ZetaGroupMarkets:
         self._subscribed_market_indexes = set()
 
     @staticmethod
-    def load(opts, throttle_ms):
+    async def load(opts, throttle_ms):
         instance = ZetaGroupMarkets()
         products_per_expiry = math.floor(len(exchange._zeta_group.products), len(exchange.zeta_group.expiry_series))
         indexes = [i for i in range(ACTIVE_MARKETS)]

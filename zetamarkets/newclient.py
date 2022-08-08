@@ -60,7 +60,7 @@ class Client:
     async def load(connection, wallet, opts, callback, throttle):
         client = Client(connection, wallet, opts)
         client._usdc_account_address = await utils.get_associated_token_address(
-            Exchange.usdc_mint_address,
+            Exchange._usdc_mint_address,
             wallet.publicKey
         )
 
@@ -70,6 +70,7 @@ class Client:
                 Exchange.program_id,
                 wallet.publicKey
             )
+            ### TODO: REFACTOR THESE LINES
             await Exchange.program.account.whitelist_deposit_account.fetch(
                 whitelist_deposit_address
             )
@@ -151,7 +152,7 @@ class Client:
         except:
             print("An error occurred while forming the referral accounts")
     
-    async def refer_user(referrer):
+    async def refer_user(self, referrer):
         referrer_account = await utils.get_referrer_account_address(
             Exchange.program_id,
             referrer
@@ -172,10 +173,10 @@ class Client:
         )
         return txId
     
-    def set_polling(timer_interval):
+    def set_polling(self, timer_interval):
         if self._poll_interval_id != None:
             print("Resetting existing timer to " + str(timer_interval) + " seconds")
-            clear_interval(this._poll_interval_id)
+            clear_interval(self._poll_interval_id)
         
         ### TODO: NEED SOME SORT OF SET INTERVAL THING EQUIVALENT
     def market_identifier_to_public_key(asset, market):
@@ -204,7 +205,7 @@ class Client:
         deposit_sub_client = self.get_sub_client(deposit_asset)
 
         tx.add(
-            instructions.withdrawIx(
+            instructions.withdraw_ix(
                 withdraw_asset,
                 amount,
                 withdraw_sub_client.margin_account_address,
@@ -289,7 +290,7 @@ class Client:
         return await self.get_sub_client(asset).withdraw(amount)
     
     async def withdraw_and_close_margin_account(self, asset):
-        return await this.get_sub_client(asset).withdraw_and_close_margin_account()
+        return await self.get_sub_client(asset).withdraw_and_close_margin_account()
     
     async def place_order_and_lock_position(self, asset, market, price, size, side, tag = "SDK"):
         return await self.get_sub_client(asset).place_order_and_lock_position(

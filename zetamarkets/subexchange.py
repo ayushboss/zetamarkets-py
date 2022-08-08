@@ -69,7 +69,7 @@ class SubExchange:
         underlyingMint = constants.MINTS[assetToName(asset)]
 
         zetaGroup, __zetaGroupNonce = await utils.get_zeta_group(
-            Exchange.programId,
+            Exchange.program_id,
             underlyingMint
         )
 
@@ -129,38 +129,38 @@ class SubExchange:
     async def initialize_market_nodes(self, zeta_group):
         for index in range(constants.ACTIVE_MARKETS):
             tx = Transaction().add(
-                await instructions.initializeMarketNodeIx(self.getAsset(), index)
+                await instructions.initialize_market_node_ix(self.getAsset(), index)
             )
             await utils.process_transaction(Exchange.provider, tx)
 
     async def updatePricingParameters(self, args):
         tx = Transaction().add(
-            instructions.updatePricingParametersIx(
+            instructions.update_pricing_parameters_ix(
                 self.getAsset(),
                 args,
                 Exchange.provider.wallet.publicKey
             )
         )
         await utils.process_transaction(Exchange.provider, tx)
-        await this.updateZetaGroup()
+        await self.update_zeta_group()
     
     async def updateMarginParameters(self, args):
         tx = Transaction().add(
-            instructions.updateMarginParametersIx(
+            instructions.update_margin_parameters_ix(
                 self.getAsset(),
                 args,
                 Exchange.provider.wallet.publicKey
             )
         )
         await utils.process_transaction(Exchange.provider, tx)
-        await this.updateZetaGroup()
+        await self.update_zeta_group()
     
     async def updateVolatilityNodes(nodes):
         if len(nodes) != constants.VOLATILITY_POINTS: 
             raise Exception("Invalid number of nodes. Expected " + str(constants.VOLATILITY_POINTS))
         
         tx = Transaction().add(
-            instructions.updateVolatilityNodesIx(
+            instructions.update_volatility_nodes_ix(
                 self.getAsset(),
                 nodes,
                 Exchange.provider.wallet.publicKey
@@ -175,7 +175,7 @@ class SubExchange:
         )
         print("Initializing market indexes.")
         tx = Transaction().add(
-            instructions.initializeMarketIndexesIx(
+            instructions.initialize_market_indexes_ix(
                 self.__asset,
                 marketIndexes,
                 marketIndexesNonce
@@ -187,11 +187,11 @@ class SubExchange:
                 tx,
                 [],
                 utils.default_commitment(),
-                Exchange.useLedger
+                Exchange._use_ledger
             )
         except:
             print("An exception occurred")
         
         tx2 = Transaction().add(
-            instructions.addMarketIndexesIx(self.__asset, marketIndexes)
+            instructions.add_market_indexes_ix(self.__asset, marketIndexes)
         )

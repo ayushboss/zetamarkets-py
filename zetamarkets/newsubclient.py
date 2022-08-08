@@ -723,7 +723,7 @@ class SubClient:
             )
         )
         tx.add(
-            instructions.placeOrderV3Ix(
+            instructions.place_order_v3_ix(
                 self.asset,
                 market_index,
                 new_order_price,
@@ -734,7 +734,7 @@ class SubClient:
                 new_order_tag,
                 self.margin_account_address,
                 self._parent.public_key(),
-                self._open_orders_accounts[marketIndex],
+                self._open_orders_accounts[market_index],
                 self._parent.whitelist_trading_fees_address
             )
         )
