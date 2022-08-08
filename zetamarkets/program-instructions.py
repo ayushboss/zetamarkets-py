@@ -209,3 +209,135 @@ def place_order_ix(asset, market_index, price, size, side, client_order_id, marg
         },
         remaining_accounts
     )
+
+def initialize_zeta_state_ix(state_address, state_nonce, serum_authority, treasury_wallet, serum_nonce, mint_authority, mint_authority_nonce, params):
+    args = params
+    args["state_nonce"] = state_nonce
+    args["serum_nonce"] = serum_nonce
+    args["mint_auth_nonce"] = mint_authority_nonce
+
+    return initialize_zeta_state(
+        args,
+        {
+            "state": state_address,
+            "serum_authority": serum_authority,
+            "mint_authority": mint_authority,
+            "treasury_wallet": treasury_wallet,
+            "rent": SYSVAR_RENT_PUBKEY,
+            "system_program": SYS_PROGRAM_ID,
+            "usdc_mint": Exchange._usdc_mint_address,
+            "admin": Exchange.provider.wallet.publicKey
+        }
+    )
+
+async def intialize_zeta_group_ix(asset, underlying_mint, oracle, pricing_args, margin_args):
+    zeta_group, zeta_group_nonce = await utils.get_zeta_group(
+        Exchange.program_id,
+        underlying_mint
+    )
+
+    underlying, underlying_nonce = await utils.get_underlying(
+        Exchange.program_id,
+        Exchange._state.num_underlyings
+    )
+
+    sub_exchange = Exchange.get_sub_exchange(asset)
+
+    greeks, greeks_nonce = await utils.get_greeks(
+        Exchange.program_id,
+        sub_exchange.zeta_group_address
+    )
+
+    vault, vault_nonce = await utils.get_vault(
+        Exchange.program_id,
+        sub_exchange.zeta_group_address
+    )
+
+    insurance_vault, insurance_vault_nonce = await utils.get_zeta_insurance_vault(
+        Exchange.program_id,
+        sub_exchange.zeta_group_address
+    )
+
+    socialized_loss_account, socialized_loss_account_nonce = await utils.get_socialized_loss_account(
+        Exchange.program_id,
+        sub_exchange.zeta_group_address
+    )
+
+    return initialize_zeta_group(
+        {
+            "zeta_group_nonce": zeta_group_nonce,
+            "underlying_nonce": underlying_nonce,
+            "greeks_nonce": greeks_nonce,
+            "vault_nonce": vault_nonce,
+            "insurance_vault_nonce": insurance_vault_nonce,
+            "socialized_loss_account_nonce": socialized_loss_account_nonce,
+            "interest_rate": pricing_args.interest_rate,
+            "volatility": pricing_args.volatility,
+            "option_trade_normalizer": pricing_args.option_trade_normalizer,
+            "future_trade_normalizer": pricing_args.future_trade_normalizer,
+            "max_volatility_retreat": pricing_args.max_volatility_retreat,
+            "max_interest_retreat": pricing_args.max_interest_retreat,
+            "max_delta": pricing_args.max_delta,
+            "min_delta": pricing_args.min_delta,
+            "min_interest_rate": pricing_args.min_interest_rate,
+            "max_interest_rate": pricing_args.max_interest_rate,
+            "min_volatility": pricing_args.min_volatility,
+            "max_volatility": pricing_args.max_volatility,
+            "future_margin_initial": margin_args.future_margin_initial,
+            "future_margin_maintenance": margin_args.future_margin_maintenance,
+            "option_mark_percentage_long_initial": margin_args.option_mark_percentage_long_initial,
+            "option_spot_percentage_long_initial": margin_args.option_spot_percentage_long_initial,
+            "option_spot_percentage_short_initial": margin_args.option_spot_percentage_short_initial,
+            "option_dynamic_percentage_short_initial": margin_args.option_dynamic_percentage_short_initial,
+            "option_mark_percentage_long_maintenance": margin_args.option_mark_percentage_long_maintenance,
+            "option_spot_percentage_long_maintenance": margin_args.option_spot_percentage_long_maintenance,
+            "option_spot_percentage_short_maintenance": margin_args.option_spot_percentage_short_maintenance,
+            "option_dynamic_percentage_short_maintenance": margin_args.option_dynamic_percentage_short_maintenance,
+            "option_short_put_cap_percentage": margin_args.option_short_put_cap_percentage,
+        },
+        {
+            "state": Exchange.state_address,
+            "admin": Exchange.state.admin,
+            "system_program": SYS_PROGRAM_ID,
+            "underlying_mint": underlying_mint,
+            "zeta_program": Exchange.program_id,
+            "oracle": oracle,
+            "zeta_group": zeta_group,
+            "greeks": greeks,
+            "underlying": underlying,
+            "vault": vault,
+            "insurance_vault": insurance_vault,
+            "socialized_loss_account": socialized_loss_account,
+            "token_program": TOKEN_PROGRAM_ID,
+            "usdc_mint": Exchange._usdc_mint_address,
+            "rent": SYSVAR_RENT_PUBKEY,
+        }
+    )
+
+def update_zeta_state_ix(params, admin):
+    return update_zeta_state(params, {
+        {
+            "state": Exchange.state_address,
+            "admin": admin
+        }
+    })
+
+async def initialize_referrer_alias(referrer, alias):
+    referrer_account = await utils.get_referrer_account_address(
+        Exchange.program.program_id,
+        referrer
+    )
+
+    referrer_alias = await utils.get_referrer_alias_address(
+        Exchange.program.program_id,
+        alias
+    );
+
+    return initialize_referrer_alias(alias, {
+        {
+            "referrer": referrer,
+            "referrer_alias": referrer_alias,
+            "referrer_account": referrer_account,
+            "system_program": SYS_PROGRAM_ID,
+        },
+    });

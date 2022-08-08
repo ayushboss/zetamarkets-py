@@ -6,6 +6,7 @@ from anchorpy import Program, Provider, Wallet
 import utils
 from exchange import Exchange
 import constants
+from newsubclient import SubClient
 
 class Client:
     def public_key(self):
@@ -56,6 +57,8 @@ class Client:
         self._referral_account = None
         self._referrer_account = None
         self._referrer_account = None
+        self._whitelist_deposit_address = None
+        self._usdc_account_address = None
     
     async def load(connection, wallet, opts, callback, throttle):
         client = Client(connection, wallet, opts)
