@@ -120,10 +120,10 @@ def convert_decimal_to_native_integer(amount):
     return Decimal(amount)
 
 def get_most_recent_expired_index():
-    if Exchange.markets.front_expiry_index - 1 < 0:
+    if Exchange._markets.front_expiry_index - 1 < 0:
         return constants.ACTIVE_EXPIRIES -1
     else:
-        return Exchange.markets.front_expiry_index - 1
+        return Exchange._markets.front_expiry_index - 1
 
 def display_state():
     ordered_indexes = [
