@@ -267,7 +267,7 @@ async def fetch_referrer_alias_account(referrer, alias):
             return acc
     return None
 
-def convert_buffer_to_trimmed_string(buffer: int[]):
+def convert_buffer_to_trimmed_string(buffer: list[int]):
     buffer_string = str(bytes(buffer))
     split_index = len(buffer_string)
 
