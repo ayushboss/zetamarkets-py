@@ -80,8 +80,8 @@ class Client:
             tx.add(initialize_margin_account_ix(exchange.zeta_group_address, self._margin_account_address, self.public_key))
         tx.add(
             await instructions.deposit_ix(amount, self._margin_account_address, self._usdc_account_address, self.public_key, self._whitelist_deposit_address)
-            tx_id = await utils.process_transaction(self._provider, tx)
         )
+        tx_id = await utils.process_transaction(self._provider, tx)
         # Add deposit transaction
         pass
 

@@ -9,6 +9,7 @@ import constants
 from solana.publickey import PublicKey
 from solana.transaction import Transaction, TransactionSignature, TransactionInstruction
 import solana.rpc.api
+import my_client.accounts
 
 def default_commitment() -> Dict:
     return {
@@ -19,12 +20,12 @@ def default_commitment() -> Dict:
 
 
 def get_vault(program_id: PublicKey, zeta_group: PublicKey):
-    return solana.publickey.PublicKey.find_program_address(
+    return PublicKey.find_program_address(
         [bytes("vault", "utf-8"), bytes(zeta_group)], program_id
     )
 
 
-def get_serum_vault(program_id: solana.publickey.PublicKey, zeta_group):
+def get_serum_vault(program_id: PublicKey, zeta_group):
     """_summary_
 
     Parameters
@@ -103,7 +104,7 @@ def get_market_uninitialized():
 
 
 def get_underlying(program_id: PublicKey, underlying_index: int):
-    return solana.publickey.PublicKey.find_program_address(
+    return PublicKey.find_program_address(
         [bytes("underlying", "utf-8"), bytes([underlying_index])], program_id
     )
 
@@ -119,14 +120,14 @@ def convert_decimal_to_native_integer(amount):
     return Decimal(amount)
 
 def get_most_recent_expired_index():
-    if exchange.markets.front_expiry_index - 1 < 0:
+    if Exchange.markets.front_expiry_index - 1 < 0:
         return constants.ACTIVE_EXPIRIES -1
     else:
-        return exchange.markets.front_expiry_index - 1
+        return Exchange.markets.front_expiry_index - 1
 
 def display_state():
     ordered_indexes = [
-        exchange._zeta_group.front_expiry_index,
+        Exchange._zeta_group.front_expiry_index,
         get_most_recent_expired_index()
 
     ]
@@ -134,7 +135,7 @@ def display_state():
 
 
 def get_margin_account(program_id: PublicKey, zeta_group: PublicKey, user_key: PublicKey):
-    return solana.publickey.PublicKey.find_program_address(
+    return PublicKey.find_program_address(
         [
             bytes("margin", "utf-8"),
             bytes(zeta_group),
@@ -146,17 +147,17 @@ def get_margin_account(program_id: PublicKey, zeta_group: PublicKey, user_key: P
 
 def get_associated_token_address(mint: PublicKey, owner: PublicKey):
     # TODO(J0): Figure out how to properly import Addresses below from SPL
-    return solana.publickey.PublicKey.find_program_address(
+    return PublicKey.find_program_address(
         [
             bytes(owner),
             bytes(
-                solana.publickey.PublicKey(
+                PublicKey(
                     "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
                 )
             ),
             bytes(mint),
         ],
-        solana.publickey.PublicKey("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"),
+        PublicKey("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"),
     )[0]
 
 def get_zeta_group(program_id: PublicKey, mint: PublicKey):
@@ -169,7 +170,7 @@ def get_zeta_group(program_id: PublicKey, mint: PublicKey):
     )
 
 def get_greeks(program_id: PublicKey, zeta_group: PublicKey):
-    return solana.publickey.PublicKey.find_program_address(
+    return PublicKey.find_program_address(
         [
             bytes("greeks", "utf-8"),
             bytes(zeta_group),
@@ -178,7 +179,7 @@ def get_greeks(program_id: PublicKey, zeta_group: PublicKey):
     )
 
 def get_underlying(program_id: PublicKey, underlying_index: int):
-    return solana.publickey.PublicKey.find_program_address(
+    return PublicKey.find_program_address(
         [
             bytes("underlying", "utf-8"),
             bytes([underlying_index]),
@@ -205,7 +206,7 @@ async def process_transaction(provider: Provider, tx: Transaction, signers=None,
         tx = await provider.wallet.sign_transaction(tx)
     
     try:
-        tx_sig = await solana.rpc.api.Client.send_raw_transaction(Exchange.client, tx.serialize(), opts)
+        tx_sig = await solana.rpc.api.Client.send_raw_transaction(tx.serialize(), opts)
         return tx_sig
     except:
         raise Exception("Error in process_transaction")
@@ -260,7 +261,7 @@ async def fetch_referrer_alias_account(referrer, alias):
     if not referrer and not alias:
         return None
     
-    referrer_aliases = await Exchange.program.account.refrerrer_Alias.all()
+    referrer_aliases = await my_client.accounts.referrer_alias.ReferrerAlias.alias
     for i in range(len(referrer_aliases)):
         acc = referrer_aliases[i].account
         if (referrer and acc.referrer == referrer) or (alias and convert_buffer_to_trimmed_string(acc.alias) == alias):
@@ -273,7 +274,7 @@ def convert_buffer_to_trimmed_string(buffer: list[int]):
 
     for index in range(len(buffer_string)):
         if buffer_string[index] == 0:
-            spit_index = index
+            split_index = index
             break
     return buffer_string[0:split_index]
 
@@ -354,7 +355,7 @@ async def simulate_transaction(provider: Provider, tx: Transaction):
     events = []
     
     def cb(e: Event):
-        events.push(e)
+        events.append(e)
 
     parser.parse_logs(response.logs, cb)
 
@@ -424,7 +425,7 @@ async def get_token_account_info(provider: Provider, key: PublicKey):
 
     if account_info.delegate_option == 0:
         account_info.delegate = None
-        account_info.delegated_amount = 00
+        account_info.delegated_amount = 0
     else:
         account_info.delegate = PublicKey(account_info.delegate)
         account_info.delegated_amount = account_info.delegated_amount
