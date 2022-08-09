@@ -72,7 +72,7 @@ class Client:
 
         client._whitelist_deposit_address = None
         try:
-            whitelist_deposit_address, _whitelist_trading_fees_nonce = await utils.get_user_white_list_deposit_account(
+            whitelist_deposit_address, _whitelist_trading_fees_nonce = await utils.get_user_whitelist_deposit_account(
                 Exchange.program_id,
                 wallet.public_key
             )
@@ -87,7 +87,7 @@ class Client:
         
         client._whitelist_trading_fees_address = None
         try:
-            whitelist_trading_fees_address, _whitelist_trading_fees_nonce = await utils.get_user_white_list_trading_fees_account(
+            whitelist_trading_fees_address, _whitelist_trading_fees_nonce = await utils.get_user_whitelist_trading_fees_account(
                 Exchange.program_id,
                 wallet.public_key
             )
@@ -170,7 +170,7 @@ class Client:
             print("Error when trying to pull the referrer account")
         
         tx = Transaction().add(
-            await refer_user_ix(self.provider.wallet.public_key, referrer)
+            await instructions.refer_user_ix(self.provider.wallet.public_key, referrer)
         )
         txId = await utils.process_transaction(self.provider, tx)
 
@@ -375,13 +375,13 @@ class Client:
         return await self.get_sub_client(asset).cancel_multiple_orders_no_error(cancel_arguments)
     
     async def force_cancel_orders(self, asset, market, margin_account_to_cancel):
-        return await self.get_all_subclients(asset).force_cancel_orders(
+        return await self.get_sub_client(asset).force_cancel_orders(
             self.market_identifier_to_public_key(asset, market),
             margin_account_to_cancel
         )
 
     async def liquidate(self, asset, market, liquidated_margin_account, size):
-        return await self.get_all_subclients(asset).liquidate(
+        return await self.get_sub_client(asset).liquidate(
             self.market_identifier_to_public_key(asset, market),
             liquidated_margin_account,
             size
@@ -453,7 +453,7 @@ class Client:
             self.public_key()
         )
 
-        referrer_alias_address = await utils.get_referer_alias_address(
+        referrer_alias_address = await utils.get_referrer_alias_address(
             Exchange.program_id,
             alias
         )

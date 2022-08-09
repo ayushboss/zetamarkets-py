@@ -5,6 +5,8 @@ import constants
 import utils
 from exchange import Exchange
 from zetamarkets.markets import ZetaGroupMarkets
+import program_instructions as instructions
+import var_types as types
 
 class SubExchange:
     def __init__(self):
@@ -20,7 +22,7 @@ class SubExchange:
         self.__eventEmitters = []
         self.__greeks = None ### NEED TO IMPLEMENT GREEKS CLASS
         self.__greeksAddress = PublicKey("0")
-        self.__marginParams = types.MarginParams ### NEED TO IMPLEMENT WHATEVER THIS IS
+        self.__marginParams = None ### NEED TO IMPLEMENT WHATEVER THIS IS
 
     def isSetup(self):
         return self.__isSetup
@@ -82,7 +84,7 @@ class SubExchange:
 
         self.__greeksAddress = greeks
 
-        vault_address, _vault_nonce = await utils.getVault( ### NEED TO IMPLEMENT GET VAULT FUNCTION
+        vault_address, _vault_nonce = await utils.get_vault( ### NEED TO IMPLEMENT GET VAULT FUNCTION
             Exchange.program_id,
             self.__zetaGroupAddress
         )
@@ -166,7 +168,7 @@ class SubExchange:
                 Exchange.provider.wallet.public_key
             )
         )
-        await utils.processTransaction(Exchange.provider, tx)
+        await utils.process_transaction(Exchange.provider, tx)
     
     async def initializeZetaMarkets(self):
         marketIndexes, marketIndexesNonce = await utils.get_market_indexes(

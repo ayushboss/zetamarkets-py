@@ -8,6 +8,7 @@ import utils
 from spl.token.constants import TOKEN_PROGRAM_ID
 import constants
 from zetamarkets.constants import DEX_PID
+import var_types as types
 
 def initialize_margin_account_ix(zeta_group, margin_account, user):
     return initialize_margin_account({
@@ -28,7 +29,7 @@ def close_margin_account_ix(asset, user_key, margin_account):
 
 async def initialize_insurance_deposit_account_ix(asset, user_key, user_whitelist_insurance_key):
     sub_exchange = Exchange.get_sub_exchange(asset)
-    insurance_deposit_account, nonce = await utils.get_user_white_list_deposit_account(
+    insurance_deposit_account, nonce = await utils.get_user_whitelist_deposit_account(
         Exchange.program_id,
         sub_exchange.zeta_group_address,
         user_key
@@ -719,4 +720,15 @@ def add_market_indexes_ix(asset, market_indexes):
     return add_market_indexes({
         "market_indexes": market_indexes,
         "zeta_group": Exchange.get_zeta_group_address(asset)
+    })
+
+async def refer_user_ix(user, referrer):
+    referrer_account, _referrer_account_nonce = await utils.get_referrer_account_address(Exchange.program.program_id, referrer)
+    referral_account, _referral_account_nonce = await utils.get_referral_account_address(Exchange.program.program_id, user)
+
+    return refer_user({
+        "user": user,
+        "referrer_account": referrer_account,
+        "referral_account": referral_account,
+        "system_program": SYS_PROGRAM_ID
     })

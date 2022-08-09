@@ -1,6 +1,6 @@
 import math
 from zetamarkets.constants import NUM_STRIKES
-from zetamarkets.types import Kind
+from zetamarkets.var_types import Kind
 from exchange import Exchange
 
 class ZetaGroupMarkets:

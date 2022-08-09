@@ -1,7 +1,7 @@
 # TODO: deal with potential circular import
 from zetamarkets.exchange import Exchange
-from zetamarkets.types import MarginType, Kind
-from zetmarkets.constants import ACTIVE_MARKETS
+from var_types import MarginType, Kind
+from constants import ACTIVE_MARKETS
 
 class RiskCalculator:
     def __init__(self):

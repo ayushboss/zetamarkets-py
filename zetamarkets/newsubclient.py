@@ -1,6 +1,7 @@
 from ctypes.wintypes import tagMSG
 from datetime import datetime
 from re import M
+import string
 from this import d
 
 import anchorpy
@@ -11,6 +12,8 @@ import constants
 import utils
 from zetamarkets.assets import Asset
 from zetamarkets.newclient import Client
+import program_instructions as instructions
+import var_types as types
 
 import solana
 
@@ -68,7 +71,7 @@ class SubClient:
             raise Exception("Polling interval invalid!")
         self._poll_interval = interval
     
-    def __init__(self, asset, parent):
+    def __init__(self, asset, parent: Client):
         self._asset = asset
         self._sub_exchange = Exchange.get_sub_exchange(asset)
         self._open_orders_accounts = []
@@ -88,8 +91,9 @@ class SubClient:
         self._updating_state = False
         self._updating_state_timestamp = None
         self._spread_account_address = None
+        self._callback = None
     
-    async def load(self, asset: Asset, parent: Client, connection, wallet: types.Wallet, callback = None, throttle: bool = False):
+    async def load(self, asset: Asset, parent: Client, connection, wallet: anchorpy.Wallet, callback = None, throttle: bool = False):
         subClient = SubClient(asset, parent)
         margin_account_address, _margin_account_nonce = await utils.get_margin_account(
             Exchange.program_id,
@@ -294,9 +298,9 @@ class SubClient:
         tx.add(
             instructions.withdraw_ix(
                 self.asset,
-                self._marginAccount.balance.toNumber(),
-                self._marginAccountAddress,
-                self._parent.usdcAccountAddress,
+                self._margin_account.balance,
+                self._margin_account_address,
+                self._parent.usdc_account_address,
                 self._parent.public_key()
             )
         )
@@ -304,7 +308,7 @@ class SubClient:
             instructions.close_margin_account_ix(
                 self.asset,
                 self._parent.public_key(),
-                self._parent.margin_account_address
+                self.margin_account_address
             )
         )
         return await utils.process_transaction(self._parent.provider, tx)
@@ -405,7 +409,7 @@ class SubClient:
         else:
             open_orders_pda = self._open_orders_accounts[market_index]
         
-        order_ix = iunstructions.place_order_v3_ix(
+        order_ix = instructions.place_order_v3_ix(
             self.asset,
             market_index,
             price,
@@ -683,8 +687,9 @@ class SubClient:
             )
         )
         return await utils.process_transaction(self._parent.provider, tx)
+
     
-    async def cancel_and_place_order_by_client_order_id_v2(self, market, cancel_client_order_id, new_order_price, new_order_size, new_order_side, new_order_type, new_order_client_order_id):
+    async def cancel_and_place_order_by_client_order_id_v3(self, market: PublicKey, cancel_client_order_id, new_order_price, new_order_size, new_order_side, new_order_type, new_order_client_order_id: string = constants.DEFAULT_ORDER_TAG):
         tx = Transaction()
         market_index = self._sub_exchange.markets.get_market_index(market)
         tx.add(
@@ -891,7 +896,7 @@ class SubClient:
 
         market_index = self._sub_exchange.markets.get_market_index(market)
 
-        open_orders_account_to_cancel = await utils.create_open_order_address(
+        open_orders_account_to_cancel = await utils.create_open_orders_address(
             Exchange.program_id,
             market,
             margin_account.authority,
@@ -1052,12 +1057,12 @@ class SubClient:
         for i in range(len(self._margin_account.product_ledgers)):
             if self._margin_account.product_ledgers[i].position.size.to_number() != 0:
                 positions.append({
-                    market_index: i,
-                    market: self._sub_exchange.zeta_group.products[i].market,
-                    size: utils.convert_native_lot_size_to_decimal(
+                    "market_index": i,
+                    "market": self._sub_exchange.zeta_group.products[i].market,
+                    "size": utils.convert_native_lot_size_to_decimal(
                         self._margin_account.product_ledgers[i].position.size.to_number()
                     ),
-                    cost_of_trades: utils.convert_native_lot_size_to_decimal(
+                    "cost_of_trades": utils.convert_native_lot_size_to_decimal(
                         self._margin_account.product_ledgers[i].position.cost_of_trades
                     )
                 })
@@ -1068,12 +1073,12 @@ class SubClient:
         for i in range(len(self._spread_account.positions)):
             if self._spread_account.positions[i].size.to_number() != 0:
                 positions.append({
-                    market_index: i,
-                    market: self._sub_exchange.zeta_group.products[i].market,
-                    size: utils.convert_native_lot_size_to_decimal(
+                    "market_index": i,
+                    "market": self._sub_exchange.zeta_group.products[i].market,
+                    "size": utils.convert_native_lot_size_to_decimal(
                         self._spread_account.product_ledgers[i].position.size.to_number()
                     ),
-                    cost_of_trades: utils.convert_native_lot_size_to_decimal(
+                    "cost_of_trades": utils.convert_native_lot_size_to_decimal(
                         self._spread_account.product_ledgers[i].position.cost_of_trades
                     )
                 })
@@ -1140,6 +1145,8 @@ class SubClient:
         if decimal:
             return utils.convert_native_integer_to_decimal(cost_of_trades)
         return cost_of_trades
+    
+    
     
     async def close(self):
         if self._margin_account_subscription_id != None:

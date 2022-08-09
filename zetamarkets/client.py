@@ -5,7 +5,6 @@ from solana.transaction import Transaction
 from anchorpy import Program, Provider, Wallet
 from exchange import Exchange
 
-
 class Client:
     def public_key(self):
         return self._provider.wallet.public_key
@@ -80,7 +79,7 @@ class Client:
             tx = initialize_margin_account_tx(self.public_key)
             tx.add(initialize_margin_account_ix(exchange.zeta_group_address, self._margin_account_address, self.public_key))
         tx.add(
-            await deposit_ix(amount, self._margin_account_address, self._usdc_account_address, self.public_key, self._whitelist_deposit_address)
+            await instructions.deposit_ix(amount, self._margin_account_address, self._usdc_account_address, self.public_key, self._whitelist_deposit_address)
             tx_id = await utils.process_transaction(self._provider, tx)
         )
         # Add deposit transaction
