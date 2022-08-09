@@ -8,6 +8,7 @@ import utils
 from exchange import Exchange
 import constants
 from newsubclient import SubClient
+import my_client.accounts
 
 class Client:
     def public_key(self):
@@ -77,8 +78,10 @@ class Client:
                 wallet.public_key
             )
             ### TODO: REFACTOR THESE LINES
-            await Exchange.program.account.whitelist_deposit_account.fetch(
-                whitelist_deposit_address
+            await my_client.accounts.whitelist_deposit_account.WhitelistDepositAccount.fetch(
+                connection,
+                whitelist_deposit_address,
+                utils.default_commitment()
             )
             print("User is whitelisted for unlimited deposits into zeta.")
             client._whitelist_deposit_address = whitelist_deposit_address
@@ -91,8 +94,10 @@ class Client:
                 Exchange.program_id,
                 wallet.public_key
             )
-            await Exchange.program.account.whitelist_trading_fees_account.fetch(
-                whitelist_trading_fees_address
+            await my_client.accounts.whitelist_trading_fees_account.WhitelistTradingFeesAccount.fetch(
+                connection,
+                whitelist_trading_fees_address,
+                utils.default_commitment()
             )
             print("User is whitelisted for trading fees")
             client._whitelist_trading_fees_address = whitelist_trading_fees_address
@@ -131,8 +136,10 @@ class Client:
                 Exchange.program_id,
                 self.public_key()
             )
-            self._referrer_account = (await Exchange.program.account.referrerAccount.fetch(
-                referrerAccount
+            self._referrer_account = (await my_client.accounts.referrer_account.ReferrerAccount.fetch(
+                self.connection,
+                referrerAccount,
+                utils.default_commitment()
             ))
             print("User is a referrer. " + self.public_key())
 
@@ -150,8 +157,10 @@ class Client:
             )
 
             self._referral_account_address = referral_account_address_loc
-            self._referral_account = await Exchange.program.account.referralAccount.fetch(
-                referral_account_address_loc
+            self._referral_account = await my_client.accounts.referral_account.ReferralAccount.fetch(
+                self.connection,
+                referral_account_address_loc,
+                utils.default_commitment()
             )
 
             print("User has been referred by " + str(self._referral_account))
@@ -165,7 +174,11 @@ class Client:
         )
 
         try:
-            await Exchange.program.account.referrerAccount.fetch(referrer_account)
+            await my_client.accounts.referrer_account.ReferrerAccount.fetch(
+                self.connection,
+                referrer_account,
+                utils.default_commitment()
+            )
         except:
             print("Error when trying to pull the referrer account")
         
@@ -174,8 +187,10 @@ class Client:
         )
         txId = await utils.process_transaction(self.provider, tx)
 
-        self._referral_account = await Exchange.program.account.referralAccount.fetch(
-            self._referral_account_address
+        self._referral_account = await my_client.accounts.referral_account.ReferralAccount.fetch(
+            self.connection,
+            self._referral_account_address,
+            utils.default_commitment()
         )
         return txId
     
@@ -460,8 +475,10 @@ class Client:
 
         referrer_account = None
         try:
-            referrer_account = await Exchange.program.account.referrerAccount.fetch(
-                referrer_account_address
+            referrer_account = await my_client.accounts.referrer_account.ReferrerAccount.fetch(
+                self.connection,
+                referrer_account_address,
+                utils.default_commitment()
             )
         except:
             raise Exception("User is not a referrer, cannot create alias.")

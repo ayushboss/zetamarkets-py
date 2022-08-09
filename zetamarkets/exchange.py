@@ -36,9 +36,12 @@ class Exchange(metaclass=ExchangeMeta):
     _serum_authority = None
     _instance = None
     program_id = None
+    program = None
     is_initialized = False
     _is_setup = True
     provider: Provider = None
+    clock_timestamp = None
+    ledger_wallet = None
     
     @property
     def oracle(self):
@@ -77,6 +80,7 @@ class Exchange(metaclass=ExchangeMeta):
     def set_ledger_wallet(self, wallet):
         self._use_ledger = True
         self._ledger_wallet = wallet
+        Exchange.ledger_wallet = wallet
 
     def __init__(self, program_id, network, connection, wallet):
         # TODO: Come back to this later and see if relevant
@@ -101,10 +105,13 @@ class Exchange(metaclass=ExchangeMeta):
         self._opts = opts
         self._sub_exchanges: list[SubExchange] = []
         self._markets = []
+        self._program_subscription_ids = []
         for asset in assets:
             await self.add_sub_exchange(asset, SubExchange())
             await self.get_sub_exchange(asset).initialize(asset)
         self._is_setup = True
+        Exchange.program = self._program
+        Exchange.clock_timestamp = None
 
     async def initialize_zeta_state(self, params):
         mint_authority, mint_authority_nonce = await utils.get_mint_authority(
@@ -249,7 +256,8 @@ class Exchange(metaclass=ExchangeMeta):
         )
     
     def set_clock_data(self, data):
-        self._clock_timestamp = data
+        self.clock_timestamp = data
+        Exchange.clock_timestamp = data
 
     ### TODO: NEED TO FIGURE OUT CLOCK THINGS
 
@@ -262,7 +270,7 @@ class Exchange(metaclass=ExchangeMeta):
     #     )
 
     def add_program_subscription_id(self, id):
-        self._program_subscription_ids.push(id)
+        self._program_subscription_ids.append(id)
     
     async def update_exchange_state(self):
         await self.update_state()
@@ -300,12 +308,12 @@ class Exchange(metaclass=ExchangeMeta):
             all_live_markets = []
             for m in self._markets:
                 if m.expiry_series.is_live():
-                    all_live_markets.push(m)
+                    all_live_markets.append(m)
         
         live_markets_slices = []
         i = 0
         while i < len(all_live_markets):
-            live_markets_slices.push(
+            live_markets_slices.append(
                 all_live_markets[i:i+constants.MAX_MARKETS_TO_FETCH]
             )
             i+=constants.MAX_MARKETS_TO_FETCH
@@ -313,11 +321,11 @@ class Exchange(metaclass=ExchangeMeta):
         for live_markets in live_markets_slices:
             live_market_ask_addresses = []
             for m in live_markets:
-                live_market_ask_addresses.push(m.serum_market.asks_address)
+                live_market_ask_addresses.append(m.serum_market.asks_address)
             
             live_market_bid_addresses = []
             for m in live_markets:
-                live_market_bid_addresses.push(m.serum_market.bids_address)
+                live_market_bid_addresses.append(m.serum_market.bids_address)
 
             comb = live_market_ask_addresses
             for each in live_market_bid_addresses:

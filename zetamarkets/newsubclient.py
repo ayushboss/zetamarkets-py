@@ -14,6 +14,7 @@ from zetamarkets.assets import Asset
 from zetamarkets.newclient import Client
 import program_instructions as instructions
 import var_types as types
+import my_client.accounts
 
 import solana
 
@@ -66,6 +67,10 @@ class SubClient:
     def poll_interval(self):
         return self._poll_interval
     
+    @property
+    def connection(self):
+        return self._connection
+    
     def set_poll_interval(self, interval):
         if interval < 0:
             raise Exception("Polling interval invalid!")
@@ -92,6 +97,8 @@ class SubClient:
         self._updating_state_timestamp = None
         self._spread_account_address = None
         self._callback = None
+        self._connection = None
+        self._pending_update_slot = 0
     
     async def load(self, asset: Asset, parent: Client, connection, wallet: anchorpy.Wallet, callback = None, throttle: bool = False):
         subClient = SubClient(asset, parent)
@@ -107,6 +114,8 @@ class SubClient:
             wallet.public_key()
         )
 
+        subClient._connection = connection
+
         subClient._margin_account_address = margin_account_address
         subClient._spread_account_address = spread_account_address
 
@@ -117,16 +126,16 @@ class SubClient:
         #     subClient._margin_account_address,
         # )
 
-
-
         ### TODO: NEED TO FIGURE THIS OUT TOO
         # subClient._spread_account_subscription_id = connection.on_account_change(
 
         # )
 
         try:
-            subClient._margin_account = await Exchange.program.account.margin_account.fetch(
-                subClient._margin_account_address
+            subClient._margin_account = await my_client.accounts.margin_account.MarginAccount.fetch(
+                connection,
+                subClient._margin_account_address,
+                utils.default_commitment()
             )
 
             await subClient.update_open_order_addresses()
@@ -137,8 +146,10 @@ class SubClient:
             raise Exception("User does not have a margin account.")
 
         try:
-            subClient._spread_account = await Exchange.program.account.spread_account.fetch(
-                subClient._spread_account_address
+            subClient._spread_account = await my_client.accounts.spread_account.SpreadAccount.fetch(
+                connection,
+                subClient._spread_account_address,
+                utils.default_commitment()
             )
             subClient.update_spread_positions()
         except:
@@ -189,16 +200,20 @@ class SubClient:
 
         if fetch:
             try:
-                self._margin_account = await Exchange.program.account.marginAccount.fetch(
-                    self._margin_account_address
+                self._margin_account = await my_client.accounts.margin_account.MarginAccount.fetch(
+                    self._connection,
+                    self._margin_account_address,
+                    utils.default_commitment()
                 )
             except:
                 self.toggle_update_state(False)
                 return
             
             try:
-                self._spread_account = await Exchange.program.account.spreadAccount.fetch(
-                    self._spread_account_address
+                self._spread_account = await my_client.accounts.spread_account.SpreadAccount.fetch(
+                    self._connection,
+                    self._spread_account_address,
+                    utils.default_commitment()
                 )
             except:
                 print("Some error")
@@ -864,7 +879,7 @@ class SubClient:
         txs = utils.split_ixs_into_tx(ixs, constants.MAX_CANCELS_PER_TX)
         txIds = []
         for tx in txs:
-            txIds.push(await utils.process_transaction(self._parent.provider, tx))
+            txIds.append(await utils.process_transaction(self._parent.provider, tx))
         return txIds
     
     async def cancel_multiple_orders_no_error(self, cancel_arguments):
@@ -882,16 +897,18 @@ class SubClient:
                 cancel_arguments[i].order_id,
                 cancel_arguments[i].cancel_side
             )
-            ixs.push(ix)
+            ixs.append(ix)
         txs = utils.split_ixs_into_tx(ixs, constants.MAX_CANCELS_PER_TX)
         txIds = []
         for tx in txs:
-            txIds.push(await utils.process_transaction(self._parent.provider, tx))
+            txIds.append(await utils.process_transaction(self._parent.provider, tx))
         return txIds
     
     async def force_cancel_orders(self, market, margin_account_to_cancel):
-        margin_account = await Exchange.program.account.margin_account.fetch(
-            margin_account_to_cancel
+        margin_account = await my_client.accounts.margin_account.MarginAccount.fetch(
+            self._connection,
+            margin_account_to_cancel,
+            utils.default_commitment()
         )
 
         market_index = self._sub_exchange.markets.get_market_index(market)
@@ -939,11 +956,11 @@ class SubClient:
                 order.order_id,
                 order.side
             )
-            ixs.push(ix)
+            ixs.append(ix)
         txs = utils.split_ixs_into_txs(ixs, constants.MAX_CANCELS_PER_TX)
         txIds = []
         for tx in txs:
-            txIds.push(await utils.process_transaction(self._parent.provider, tx))
+            txIds.append(await utils.process_transaction(self._parent.provider, tx))
         return txIds
     
     async def cancel_all_orders_no_error(self):
@@ -959,12 +976,12 @@ class SubClient:
                 order.order_id,
                 order.side
             )
-            ixs.push(ix)
+            ixs.append(ix)
         
         txs = utils.split_ixs_into_tx(ixs, constants.MAX_CANCELS_PER_TX)
         txIds = []
         for tx in txs:
-            txIds.push(await utils.process_transaction(self._parent.provider, tx))
+            txIds.append(await utils.process_transaction(self._parent.provider, tx))
         return txIds
     
     async def position_movement(self, movement_type, movements):
@@ -1162,5 +1179,6 @@ class SubClient:
             self._spread_account_subscription_id = None
         
         if self._trade_event_listener != None:
+            #TODO: FIGURE OUT WHAT THIS IS
             await Exchange.program.remove_event_listener(self._trade_event_listener)
             self._trade_event_listener = None
