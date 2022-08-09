@@ -5,18 +5,18 @@ from exchange import Exchange
 
 class ZetaGroupMarkets:
 
-    ## TODO: init the singleton, for now we list it as exchange
+    ## TODO: init the singleton, for now we list it as Exchange
 
     def __init__(self):
-        self._expiry_series = [None] * len(exchange._zeta_group.expiry_series)
-        self._markets = [None] * len(exchange._zeta_group.products)
+        self._expiry_series = [None] * len(Exchange._zeta_group.expiry_series)
+        self._markets = [None] * len(Exchange._zeta_group.products)
         self._last_poll_timestamp = 0
         self._subscribed_market_indexes = set()
 
     @staticmethod
     async def load(opts, throttle_ms):
         instance = ZetaGroupMarkets()
-        products_per_expiry = math.floor(len(exchange._zeta_group.products), len(exchange.zeta_group.expiry_series))
+        products_per_expiry = math.floor(len(Exchange._zeta_group.products), len(Exchange.zeta_group.expiry_series))
         indexes = [i for i in range(ACTIVE_MARKETS)]
         for i in range(0, len(indexes), MARKET_LOAD_LIMIT):
             slice = indexes[i: i+ MARKET_LOAD_LIMIT]
@@ -27,15 +27,15 @@ class ZetaGroupMarkets:
         return instance
 
     def update_expiry_series(self):
-        for i in range(len(exchange._zeta_group.products)):
+        for i in range(len(Exchange._zeta_group.products)):
             self._markets[i].update_strike()
-        self._front_expiry_index = exchange._zeta_group.front_expiry_index
-        for j in range(len(exchange._zeta_group.expiry_series)):
+        self._front_expiry_index = Exchange._zeta_group.front_expiry_index
+        for j in range(len(Exchange._zeta_group.expiry_series)):
             strikes_initialized = self._markets[j * self.products_per_expiry()].strike is not None
             self._expiry_series[j] = ExpirySeries(j,
-                                                  int(exchange._zeta_group.expiry_series[j].active_ts),
-                                                  int(exchange._zeta_group.expiry_series[j].expiry_ts),
-                                                  exchange.zeta_group.expiry_series[j].dirty,
+                                                  int(Exchange._zeta_group.expiry_series[j].active_ts),
+                                                  int(Exchange._zeta_group.expiry_series[j].expiry_ts),
+                                                  Exchange._zeta_group.expiry_series[j].dirty,
                                                   strikes_initialized)
 
     def get_market(self, market):

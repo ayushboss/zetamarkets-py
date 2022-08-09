@@ -56,7 +56,7 @@ class RiskCalculator:
 
     @staticmethod
     def calculate_product_margin(product_index: int, spot_price: int):
-        market = Exchange.markets.markets[product_index]
+        market = Exchange._markets.markets[product_index]
         if market.strike == None:
             return None
         kind = market.kind

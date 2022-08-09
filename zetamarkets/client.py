@@ -109,6 +109,6 @@ class Client:
             )
     def place_order(market, price, size, side, client_order_id=0):
         tx = Transaction()
-        market_index = Exchange.markets.get_market_index(market)
+        market_index = Exchange._markets.get_market_index(market)
         open_orders_pda = None
         pass
