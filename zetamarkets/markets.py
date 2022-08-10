@@ -1,28 +1,82 @@
 import math
-from zetamarkets.constants import NUM_STRIKES
+from time import sleep
+from zetamarkets.constants import NUM_STRIKES, PRODUCTS_PER_EXPIRY
+import constants
 from zetamarkets.var_types import Kind
 from exchange import Exchange
+from assets import Asset
+import utils
+import var_types as types
+from pyserum.market import Market as SerumMarket
 
 class ZetaGroupMarkets:
 
     ## TODO: init the singleton, for now we list it as Exchange
 
-    def __init__(self):
+    def __init__(self, asset):
         self._expiry_series = [None] * len(Exchange._zeta_group.expiry_series)
         self._markets = [None] * len(Exchange._zeta_group.products)
         self._last_poll_timestamp = 0
         self._subscribed_market_indexes = set()
+        self._asset = asset
 
-    @staticmethod
-    async def load(opts, throttle_ms):
-        instance = ZetaGroupMarkets()
-        products_per_expiry = math.floor(len(Exchange._zeta_group.products), len(Exchange.zeta_group.expiry_series))
-        indexes = [i for i in range(ACTIVE_MARKETS)]
-        for i in range(0, len(indexes), MARKET_LOAD_LIMIT):
-            slice = indexes[i: i+ MARKET_LOAD_LIMIT]
-            await asyncio.gather()
-            # TODO: Port logic and figure out how to transfer promise.all
+    # @staticmethod
+    # async def load(opts, throttle_ms):
+    #     instance = ZetaGroupMarkets()
+    #     products_per_expiry = math.floor(len(Exchange._zeta_group.products), len(Exchange.zeta_group.expiry_series))
+    #     indexes = [i for i in range(ACTIVE_MARKETS)]
+    #     for i in range(0, len(indexes), MARKET_LOAD_LIMIT):
+    #         slice = indexes[i: i+ MARKET_LOAD_LIMIT]
+    #         await asyncio.gather()
+    #         # TODO: Port logic and figure out how to transfer promise.all
 
+    #     instance.update_expiry_series()
+    #     return instance
+
+    async def load(self, asset: Asset, opts, throttle_ms: int):
+        instance = ZetaGroupMarkets(asset)
+        sub_exchange = Exchange.get_sub_exchange(asset)
+
+        products_per_expiry = PRODUCTS_PER_EXPIRY
+        indexes = []
+        for i in range(constants.ACTIVE_MARKETS):
+            indexes.append(i)
+        
+        i = 0
+        while i < len(indexes):
+            slice = indexes[i:i+constants.MARKET_LOAD_LIMIT]
+            j = 0
+            for index in slice:
+                market_addr = sub_exchange.zeta_group.products[index].market
+                serum_market: SerumMarket = await SerumMarket.load(
+                    Exchange._connection,
+                    market_addr,
+                    constants.DEX_PID[Exchange.network],
+                )
+                base_vault_addr, _base_vault_nonce = await utils.get_zeta_vault(
+                    Exchange.program_id,
+                    serum_market.base_mint_address
+                )
+                quote_vault_addr, _quote_vault_nonce = await utils.get_zeta_vault(
+                    Exchange.program_id,
+                    serum_market.quote_mint_address
+                )
+
+                expiry_index = math.floor(index/products_per_expiry)
+                instance._markets[index] = Market(
+                    asset, 
+                    k index, 
+                    expiry_index, 
+                    types.to_product_kind(sub_exchange.zeta_group.products[index].kind),
+                    market_addr,
+                    sub_exchange.zeta_group_address,
+                    quote_vault_addr,
+                    base_vault_addr,
+                    serum_market
+                )
+                i+=1
+                j+=1
+            await sleep(throttle_ms*1000)
         instance.update_expiry_series()
         return instance
 
@@ -136,6 +190,7 @@ class ExpirySeries():
 class Market:
     def __init__(
         self,
+        asset,
         market_index,
         expiry_index,
         kind,
@@ -145,6 +200,7 @@ class Market:
         base_vault,
         serum_market,
     ):
+        self._asset = asset
         self._market_index = market_index
         self._expiry_index = expiry_index
         self._kind = kind
