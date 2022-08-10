@@ -1,9 +1,12 @@
-from zetamarkets.newclient import Client as ZetaClient
-from zetamarkets.exchange import Exchange
-from zetamarkets.network import Network
-import zetamarkets.var_types as types
-import zetamarkets.utils as utils
-import zetamarkets.assets as assets
+import sys
+sys.path.append("../")
+
+from newclient import Client as ZetaClient
+from exchange import Exchange
+from network import Network
+import var_types as types
+import assets
+import utils
 
 
 from anchorpy import Wallet

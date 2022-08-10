@@ -4,7 +4,7 @@ from decimal import Decimal
 import math
 from typing import Dict
 from exchange import Exchange
-from zetamarkets.constants import IDL_PATH, PLATFORM_PRECISION
+from constants import IDL_PATH, PLATFORM_PRECISION
 import constants
 from solana.publickey import PublicKey
 from solana.transaction import Transaction, TransactionSignature, TransactionInstruction

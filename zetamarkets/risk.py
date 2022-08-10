@@ -1,5 +1,5 @@
 # TODO: deal with potential circular import
-from zetamarkets.exchange import Exchange
+from exchange import Exchange
 from var_types import MarginType, Kind
 from constants import ACTIVE_MARKETS
 

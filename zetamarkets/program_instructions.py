@@ -7,7 +7,7 @@ from solana.system_program import SYS_PROGRAM_ID
 import utils
 from spl.token.constants import TOKEN_PROGRAM_ID
 import constants
-from zetamarkets.constants import DEX_PID
+from constants import DEX_PID
 import var_types as types
 
 def initialize_margin_account_ix(zeta_group, margin_account, user):

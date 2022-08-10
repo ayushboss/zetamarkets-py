@@ -3,9 +3,9 @@ from solana.publickey import PublicKey
 from exchange import Exchange
 import constants
 import utils
-from zetamarkets.assets import assetToName
-from zetamarkets.network import Network
-from zetamarkets.markets import ZetaGroupMarkets
+from assets import assetToName
+from network import Network
+from markets import ZetaGroupMarkets
 import my_client.accounts
 
 class SubExchange:

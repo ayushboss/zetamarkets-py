@@ -1,8 +1,8 @@
 import math
 from time import sleep
-from zetamarkets.constants import NUM_STRIKES, PRODUCTS_PER_EXPIRY
+from constants import NUM_STRIKES, PRODUCTS_PER_EXPIRY
 import constants
-from zetamarkets.var_types import Kind
+from var_types import Kind
 from exchange import Exchange
 from assets import Asset
 import utils

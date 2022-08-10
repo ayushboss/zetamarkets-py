@@ -10,9 +10,9 @@ from solana.publickey import PublicKey
 from solana.transaction import Transaction
 import constants
 import utils
-from zetamarkets.assets import Asset
-from zetamarkets.newclient import Client
-from zetamarkets.events import EventType
+from assets import Asset
+from newclient import Client
+from events import EventType
 import program_instructions as instructions
 import var_types as types
 import my_client.accounts
