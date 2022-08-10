@@ -16,6 +16,7 @@ from newsubexchange import SubExchange
 import program_instructions as instructions
 import network as Network
 from pyserum.market import orderbook as Orderbook
+from zetamarkets.events import EventType
 
 class ExchangeMeta(type):
 
@@ -177,7 +178,7 @@ class Exchange(metaclass=ExchangeMeta):
         await self.get_sub_exchange(asset).update_zeta_group()
 
     @classmethod
-    async def load(self, cls, program_id: PublicKey, network, connection, opts, wallet, throttle_ms, assets, callback):
+    async def load(self, program_id: PublicKey, network, connection, opts, wallet, throttle_ms, assets, callback):
         if self.is_initialized:
             raise Exception("Exchange already loaded")
         if not self._is_setup:
@@ -249,7 +250,7 @@ class Exchange(metaclass=ExchangeMeta):
         if self._is_initialized:
             self._risk_calculator.update_margin_requirements(asset)
         if callback != None:
-            callback(asset, EventType.Oracle, price)
+            callback(asset, EventType.ORACLE, price)
 
     async def subscribe_oracle(self, assets, callback1):
         await self._oracle.subscribe_price_feeds(

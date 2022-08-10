@@ -17,6 +17,8 @@ class EventType(Enum):
     GREEKS = "greeks"
     # A trade event for the user margin account.
     TRADE = "trade"
+    # Happens when an order is either fully filled or cancelled
+    ORDERCOMPLETE = "ordercomplete"
     # An update in the orderbook.
     ORDERBOOK = "orderbook"
     # On oracle account change.

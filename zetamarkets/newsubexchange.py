@@ -5,6 +5,7 @@ import constants
 import utils
 from zetamarkets.assets import assetToName
 from zetamarkets.network import Network
+from zetamarkets.markets import ZetaGroupMarkets
 import my_client.accounts
 
 class SubExchange:
@@ -69,14 +70,14 @@ class SubExchange:
 
         self._is_setup = True
     
-    async def load(self, asset: Asset, program_id: PublicKey, network: Network, opts, throttle_ms = 0, callback):
+    async def load(self, asset: Asset, program_id: PublicKey, network: Network, opts, throttle_ms, callback):
         print("Loading " + assetToName(asset) + " subexchange")
         if self._is_initialized:
             raise Exception("SubExchange already loaded.")
         
         await self.update_zeta_group()
 
-        self._markets = await ZetaGroupMarkets.load(self.asset, opts, 0)
+        self._markets = await ZetaGroupMarkets.load(self._asset, opts, 0)
 
         if self._zeta_group.products[self._zeta_group.products.length - 1].market == PublicKey("0"):
             raise Exception("Zeta group markets are uninitialized!")
@@ -122,6 +123,10 @@ class SubExchange:
             "option_short_put_cap_percentage": self.zeta_group.margin_parameters.option_short_put_cap_percentage,
         }
     def subscribe_zeta_group(self, asset, callback):
-        event_emitter = my_client.accounts.zeta_group.ZetaGroup.
+        # event_emitter = my_client.accounts.zeta_group.ZetaGroup.
+        print("Stubbed subscribe zeta group function")
+    
+    def subscribe_greeks(self, asset, callback):
+        print("Stubbed subscribe greeks function")
 
-    def subscribe_greeks(self):
+    # def subscribe_greeks(self):

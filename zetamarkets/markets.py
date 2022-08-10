@@ -65,7 +65,7 @@ class ZetaGroupMarkets:
                 expiry_index = math.floor(index/products_per_expiry)
                 instance._markets[index] = Market(
                     asset, 
-                    k index, 
+                    index, 
                     expiry_index, 
                     types.to_product_kind(sub_exchange.zeta_group.products[index].kind),
                     market_addr,
@@ -120,10 +120,12 @@ class ZetaGroupMarkets:
     def markets(self):
         return self._markets
 
-    @classmethod
-    def load(opts, throttle_ms: int):
-        instance = ZetaGroupMarkets()
-        raise("Not implemented")
+    # @classmethod
+    # def load(asset: Asset, opts, throttle_ms: int):
+    #     instance = ZetaGroupMarkets()
+    #     instance._asset = asset
+
+    #     raise("Not implemented")
 
     def subscribe_market(self,market_index):
         if market_index >= len(self._markets):
@@ -171,7 +173,7 @@ class ZetaGroupMarkets:
         else:
             raise("Only CALL, PUT, FUTURE kinds are supported")
         market = list(filter(lambda x: x.strike == strike, markets_kind))
-        return None if len(markets) == 0 else: markets[0]
+        return None if len(markets) == 0 else markets[0]
 
 
 

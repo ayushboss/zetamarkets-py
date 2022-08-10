@@ -12,6 +12,7 @@ import constants
 import utils
 from zetamarkets.assets import Asset
 from zetamarkets.newclient import Client
+from zetamarkets.events import EventType
 import program_instructions as instructions
 import var_types as types
 import my_client.accounts
