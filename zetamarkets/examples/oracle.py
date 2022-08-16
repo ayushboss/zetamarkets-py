@@ -1,20 +1,39 @@
-from zetamarkets import exchange, utils, network
-from solana.rpc.api import Client
-from solana.keypair import Keypair
+import sys
+sys.path.append("../")
 
-SERVER_URL = "https://server.zeta.markets"
-NETWORK_URL = "https://api.devnet.solana.com"
-PROGRAM_ID = "BG3oRikW8d16YjUEmX3ZxHm9SiJzrGtMhsSR8aCw1Cd7"
-netw = network.Network.LOCALNET.value
-# // Starts a solana web3 connection to an RPC endpoint
-connection = Client(NETWORK_URL, utils.default_commitment())
+from network import Network
 
-wallet = Keypair()
+import atexit
+import asyncio
+import constants
+from pythclient.pythaccounts import PythPriceAccount, PythPriceStatus
+from pythclient.solana import SolanaClient, SolanaPublicKey, SOLANA_DEVNET_HTTP_ENDPOINT, SOLANA_DEVNET_WS_ENDPOINT, SOLANA_TESTNET_HTTP_ENDPOINT, SOLANA_TESTNET_WS_ENDPOINT, SOLANA_MAINNET_HTTP_ENDPOINT, SOLANA_MAINNET_WS_ENDPOINT
 
+class Oracle:
+    def __init__(self, network, connection):
+        self._network = network
+        self._connection = connection
+        self._subscription_ids = {}
+        self._data = {}
+        self._callback = None
+        if self._network ==  Network.LOCALNET:
+            self._solana_client = SolanaClient(endpoint=SOLANA_TESTNET_HTTP_ENDPOINT, ws_endpoint=SOLANA_TESTNET_WS_ENDPOINT)
+        elif self._network == Network.DEVNET:
+            self._solana_client = SolanaClient(endpoint=SOLANA_DEVNET_HTTP_ENDPOINT, ws_endpoint=SOLANA_DEVNET_WS_ENDPOINT)
+        elif self._network == Network.MAINNET:
+            self._solana_client = SolanaClient(endpoint=SOLANA_MAINNET_HTTP_ENDPOINT, ws_endpoint=SOLANA_MAINNET_WS_ENDPOINT)
+        pyth_account_key = SolanaPublicKey(str(constants.PYTH_PRICE_FEEDS[self._network].get("SOL/USD")))
+        self._price = PythPriceAccount(pyth_account_key, self._solana_client)
+        # https://docs.python.org/3/library/atexit.html#atexit.register
+        # atexit.register(lambda: asyncio.get_event_loop().run_until_complete(self._solana_client.close()))
 
-if __name__ == "__main__":
-    exch = exchange.Exchange(PROGRAM_ID, str(netw), connection, wallet)
+    def get_available_price_feeds(self):
+        return constants.PYTH_PRICE_FEEDS[self._network].keys()
 
-    print(exch.oracle.get_available_price_feeds())
-    price = exch.oracle.get_price("SOL/USD")
-    print(price)
+    async def get_price(self):
+        await self._price.update()
+        price_status = self._price.aggregate_price_status
+        if price_status == PythPriceStatus.TRADING:
+            return self._price.aggregate_price
+        else:
+            print("Price is not valid now. Status is", price_status)

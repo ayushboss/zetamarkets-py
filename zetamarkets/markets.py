@@ -3,19 +3,21 @@ from time import sleep
 from constants import NUM_STRIKES, PRODUCTS_PER_EXPIRY
 import constants
 from var_types import Kind
-from exchange import Exchange
 from assets import Asset
 import utils
 import var_types as types
 from pyserum.market import Market as SerumMarket
+from solana.rpc.api import Client
+import network
 
 class ZetaGroupMarkets:
 
     ## TODO: init the singleton, for now we list it as Exchange
 
     def __init__(self, asset):
-        self._expiry_series = [None] * len(Exchange._zeta_group.expiry_series)
-        self._markets = [None] * len(Exchange._zeta_group.products)
+        from exchange import Exchange
+        self._expiry_series = [None] * len(Exchange.get_sub_exchange(self, asset)._zeta_group.expiry_series)
+        self._markets = [None] * len(Exchange.get_sub_exchange(self, asset)._zeta_group.products)
         self._last_poll_timestamp = 0
         self._subscribed_market_indexes = set()
         self._asset = asset
@@ -34,8 +36,9 @@ class ZetaGroupMarkets:
     #     return instance
 
     async def load(self, asset: Asset, opts, throttle_ms: int):
+        from exchange import Exchange
         instance = ZetaGroupMarkets(asset)
-        sub_exchange = Exchange.get_sub_exchange(asset)
+        sub_exchange = Exchange.get_sub_exchange(self, asset)
 
         products_per_expiry = PRODUCTS_PER_EXPIRY
         indexes = []
@@ -48,21 +51,33 @@ class ZetaGroupMarkets:
             j = 0
             for index in slice:
                 market_addr = sub_exchange.zeta_group.products[index].market
-                serum_market: SerumMarket = await SerumMarket.load(
-                    Exchange._connection,
+                print(Exchange.network == network.Network.DEVNET)
+                NETWORK_URL = "https://api.devnet.solana.com"
+
+                connection = Client(NETWORK_URL, utils.default_commitment())
+                print("market address")
+                print(market_addr)
+                serum_market: SerumMarket = SerumMarket.load(
+                    connection,
                     market_addr,
                     constants.DEX_PID[Exchange.network],
                 )
-                base_vault_addr, _base_vault_nonce = await utils.get_zeta_vault(
+                
+                print("mintcoming")
+                print(serum_market.state.base_mint())
+                print(serum_market.state.quote_mint())
+
+                base_vault_addr, _base_vault_nonce = utils.get_zeta_vault(
                     Exchange.program_id,
-                    serum_market.base_mint_address
+                    serum_market.state.base_mint()
                 )
-                quote_vault_addr, _quote_vault_nonce = await utils.get_zeta_vault(
+                quote_vault_addr, _quote_vault_nonce = utils.get_zeta_vault(
                     Exchange.program_id,
-                    serum_market.quote_mint_address
+                    serum_market.state.quote_mint()
                 )
 
                 expiry_index = math.floor(index/products_per_expiry)
+
                 instance._markets[index] = Market(
                     asset, 
                     index, 
@@ -76,20 +91,23 @@ class ZetaGroupMarkets:
                 )
                 i+=1
                 j+=1
-            await sleep(throttle_ms*1000)
+            print(throttle_ms)
+            sleep(throttle_ms*1000)
         instance.update_expiry_series()
         return instance
 
     def update_expiry_series(self):
-        for i in range(len(Exchange._zeta_group.products)):
+        from exchange import Exchange
+        subex = Exchange.get_sub_exchange(self, self._asset)
+        for i in range(len(subex._zeta_group.products)):
             self._markets[i].update_strike()
-        self._front_expiry_index = Exchange._zeta_group.front_expiry_index
-        for j in range(len(Exchange._zeta_group.expiry_series)):
-            strikes_initialized = self._markets[j * self.products_per_expiry()].strike is not None
+        self._front_expiry_index = subex._zeta_group.front_expiry_index
+        for j in range(len(subex._zeta_group.expiry_series)):
+            strikes_initialized = self._markets[j * self.products_per_expiry()]._strike is not None
             self._expiry_series[j] = ExpirySeries(j,
-                                                  int(Exchange._zeta_group.expiry_series[j].active_ts),
-                                                  int(Exchange._zeta_group.expiry_series[j].expiry_ts),
-                                                  Exchange._zeta_group.expiry_series[j].dirty,
+                                                  int(subex._zeta_group.expiry_series[j].active_ts),
+                                                  int(subex._zeta_group.expiry_series[j].expiry_ts),
+                                                  subex._zeta_group.expiry_series[j].dirty,
                                                   strikes_initialized)
 
     def get_market(self, market):
@@ -136,8 +154,8 @@ class ZetaGroupMarkets:
         self._subscribed_market_indexes.remove(market_index)
 
 
-    def products_per_expiry() -> int:
-        return math.floor(len(self._markets.length), len(self._expiry_series))
+    def products_per_expiry(self) -> int:
+        return math.floor(len(self._markets)/len(self._expiry_series))
 
     def get_markets_by_expiry_index(self, expiry_index: int):
         head = expiry_index * self.products_per_expiry_index()
@@ -151,7 +169,7 @@ class ZetaGroupMarkets:
         if kind == Kind.CALL:
             return markets[NUM_STRIKES]
         elif kind == Kind.PUT:
-            return markets[NUM_STRIKES, 2 * MARKET_STRIKES]
+            return markets[NUM_STRIKES, 2 * NUM_STRIKES]
         else:
             raise("Options market kind not supported, must be CALL or PUT")
 
@@ -255,7 +273,7 @@ class Market:
         return self.strikes
 
     def update_order_book(self):
-
+        from exchange import Exchange
         [self._bids, self._asks] = asyncio.gather(self._serum_market.load_bids(Exchange.provider.connection),
                                                  self._serum_market.load_asks(Exchange.provider.connection))
 
@@ -274,3 +292,11 @@ class Market:
             descending = orderbook_side.slab
         """
         pass
+    
+    def update_strike(self):
+        from exchange import Exchange
+        strike = Exchange.get_sub_exchange(self, self._asset).zeta_group.products[self._market_index].strike
+        if not strike.is_set:
+            self._strike = None
+        else:
+            self._strike = strike.value

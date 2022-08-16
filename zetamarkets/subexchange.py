@@ -14,14 +14,14 @@
     #     self.__isInitialized = False
     #     self.__zetaGroup = None ### NEED TO IMPLEMENT THE ZETAGROUP CLASS
     #     self.__asset = Asset.UNDEFINED
-    #     self.__zetaGroupAddress = PublicKey("0")
-    #     self.__vaultAddress = PublicKey("0")
-    #     self.__insuranceVaultAddress = PublicKey("0")
-    #     self.__socializedLossAccountAddress = PublicKey("0")
+    #     self.__zetaGroupAddress = PublicKey("11111111111111111111111111111111")
+    #     self.__vaultAddress = PublicKey("11111111111111111111111111111111")
+    #     self.__insuranceVaultAddress = PublicKey("11111111111111111111111111111111")
+    #     self.__socializedLossAccountAddress = PublicKey("11111111111111111111111111111111")
     #     self.__markets = None ### NEED TO IMPLEMENT THE ZETA GROUP MARKETS CLASS
     #     self.__eventEmitters = []
     #     self.__greeks = None ### NEED TO IMPLEMENT GREEKS CLASS
-    #     self.__greeksAddress = PublicKey("0")
+    #     self.__greeksAddress = PublicKey("11111111111111111111111111111111")
     #     self.__marginParams = None ### NEED TO IMPLEMENT WHATEVER THIS IS
 
 #     def isSetup(self):

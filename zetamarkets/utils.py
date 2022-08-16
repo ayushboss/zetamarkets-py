@@ -3,12 +3,13 @@ import solana
 from decimal import Decimal
 import math
 from typing import Dict
-from exchange import Exchange
 from constants import IDL_PATH, PLATFORM_PRECISION
 import constants
 from solana.publickey import PublicKey
 from solana.transaction import Transaction, TransactionSignature, TransactionInstruction
 import solana.rpc.api
+from spl.token._layouts import ACCOUNT_LAYOUT as TOKEN_ACCOUNT_LAYOUT
+from spl.token.constants import TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID
 import my_client.accounts
 
 def default_commitment() -> Dict:
@@ -73,7 +74,13 @@ def get_zeta_group(
 
 
 def get_zeta_vault(program_id: PublicKey, mint: PublicKey):
-    pass
+    return PublicKey.find_program_address(
+        [
+            bytes("zeta-vault", "utf-8"),
+            bytes(mint)
+        ],
+        program_id
+    )
 
 def get_zeta_insurance_vault(program_id: PublicKey, zeta_group_address: PublicKey):
     return PublicKey.find_program_address(
@@ -120,12 +127,14 @@ def convert_decimal_to_native_integer(amount):
     return Decimal(amount)
 
 def get_most_recent_expired_index():
+    from exchange import Exchange
     if Exchange._markets.front_expiry_index - 1 < 0:
         return constants.ACTIVE_EXPIRIES -1
     else:
         return Exchange._markets.front_expiry_index - 1
 
 def display_state():
+    from exchange import Exchange
     ordered_indexes = [
         Exchange._zeta_group.front_expiry_index,
         get_most_recent_expired_index()
@@ -150,17 +159,15 @@ def get_associated_token_address(mint: PublicKey, owner: PublicKey):
     return PublicKey.find_program_address(
         [
             bytes(owner),
-            bytes(
-                PublicKey(
-                    "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
-                )
-            ),
+            bytes(PublicKey(TOKEN_PROGRAM_ID)),
             bytes(mint),
         ],
-        PublicKey("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"),
+        PublicKey(ASSOCIATED_TOKEN_PROGRAM_ID),
     )[0]
 
 def get_zeta_group(program_id: PublicKey, mint: PublicKey):
+    print("getting zeta group")
+    print(program_id)
     return PublicKey.find_program_address(
         [
             bytes("zeta-group", "utf-8"),
@@ -188,7 +195,7 @@ def get_underlying(program_id: PublicKey, underlying_index: int):
     )
 
 async def process_transaction(provider: Provider, tx: Transaction, signers=None, opts=None, use_ledger=False):
-    # TODO: Implement this
+    from exchange import Exchange
     txSig = TransactionSignature()
     blockhash = await provider.connection.get_recent_blockhash()
     tx.recent_blockhash = blockhash
@@ -211,8 +218,8 @@ async def process_transaction(provider: Provider, tx: Transaction, signers=None,
     except:
         raise Exception("Error in process_transaction")
     
-async def get_spread_account(program_id, zeta_group, user_key):
-    return await PublicKey.find_program_address(
+def get_spread_account(program_id, zeta_group, user_key):
+    return PublicKey.find_program_address(
         [
             bytes("spread", "utf-8"),
             bytes(zeta_group),
@@ -222,7 +229,7 @@ async def get_spread_account(program_id, zeta_group, user_key):
     )
 
 async def get_zeta_treasury_wallet(program_id, mint):
-    return await PublicKey.find_program_address(
+    return PublicKey.find_program_address(
         [
             bytes("zeta-treasury-wallet", "utf-8"),
             bytes(mint)
@@ -323,6 +330,7 @@ def split_ixs_into_tx(ixs: TransactionInstruction, ixs_per_tx: int):
     return txs
 
 async def create_open_orders_address(program_id: PublicKey, market: PublicKey, user_key: PublicKey, nonce: int):
+    from exchange import Exchange
     return await PublicKey.create_program_address(
         [
             bytes("open-order", "utf-8"),
@@ -334,6 +342,7 @@ async def create_open_orders_address(program_id: PublicKey, market: PublicKey, u
     )
 
 async def simulate_transaction(provider: Provider, tx: Transaction):
+    from exchange import Exchange
     response = None
     try:
         response = await provider.simulate(tx)
@@ -360,6 +369,7 @@ async def simulate_transaction(provider: Provider, tx: Transaction):
     parser.parse_logs(response.logs, cb)
 
 async def get_open_orders(program_id, market, user_key):
+    from exchange import Exchange
     return await PublicKey.find_program_address(
         [
             bytes("open-orders", "utf-8"),
@@ -408,15 +418,28 @@ def convert_native_integer_to_decimal(amount):
     return amount/(10**constants.PLATFORM_PRECISION)
 
 async def get_token_account_info(provider: Provider, key: PublicKey):
-    info = provider.connection.get_account_info()
+    print("pubkey of token account: " + str(key))
+    info = await provider.connection.get_account_info(key)
     if info == None:
         raise Exception("Token account " + str(key) + "doesn't exist")
     
-    if len(info.data) != TokenAccountLayout.span:
+    print("info keys")
+    print(info.keys())
+    print(str(info))
+    print(str(info["result"]))
+    print(info["result"].keys())
+    print(info["result"]['value']['data'])
+    print(info["result"]['value']['data'][0])
+
+    print(len(info["result"]['value']['data'][0]))
+    print(TOKEN_ACCOUNT_LAYOUT.sizeof())
+
+    if len(info["result"]['value']['data'][0]) != TOKEN_ACCOUNT_LAYOUT.sizeof():
         raise Exception("Invalid account size")
     
-    data = bytes.fromhex(info.data)
-    account_info = TokenAccountLayout.decode(data)
+
+    data = bytes.fromhex(info["result"]['value']['data'][0])
+    account_info = TOKEN_ACCOUNT_LAYOUT.parse(data)
 
     account_info.address = key
     account_info.mint = PublicKey(account_info.mint)

@@ -1,6 +1,7 @@
 import atexit
 import asyncio
 from zetamarkets import constants
+from network import Network
 from pythclient.pythaccounts import PythPriceAccount, PythPriceStatus
 from pythclient.solana import SolanaClient, SolanaPublicKey, SOLANA_DEVNET_HTTP_ENDPOINT, SOLANA_DEVNET_WS_ENDPOINT, SOLANA_TESTNET_HTTP_ENDPOINT, SOLANA_TESTNET_WS_ENDPOINT, SOLANA_MAINNET_HTTP_ENDPOINT, SOLANA_MAINNET_WS_ENDPOINT
 
@@ -11,11 +12,11 @@ class Oracle:
         self._subscription_ids = {}
         self._data = {}
         self._callback = None
-        if self._network ==  "testnet":
+        if self._network ==  Network.LOCALNET:
             self._solana_client = SolanaClient(endpoint=SOLANA_TESTNET_HTTP_ENDPOINT, ws_endpoint=SOLANA_TESTNET_WS_ENDPOINT)
-        elif self._network == "devnet":
+        elif self._network == Network.DEVNET:
             self._solana_client = SolanaClient(endpoint=SOLANA_DEVNET_HTTP_ENDPOINT, ws_endpoint=SOLANA_DEVNET_WS_ENDPOINT)
-        elif self._network == "mainnet":
+        elif self._network == Network.MAINNET:
             self._solana_client = SolanaClient(endpoint=SOLANA_MAINNET_HTTP_ENDPOINT, ws_endpoint=SOLANA_MAINNET_WS_ENDPOINT)
         pyth_account_key = SolanaPublicKey(str(constants.PYTH_PRICE_FEEDS[self._network].get("SOL/USD")))
         self._price = PythPriceAccount(pyth_account_key, self._solana_client)

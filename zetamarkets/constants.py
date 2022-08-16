@@ -1,18 +1,23 @@
 from solana.publickey import PublicKey
 from pathlib import Path
 
+import sys
+# sys.path.append("../")
+from assets import Asset
+from network import Network
+
 # MINTS = {"SOL": PublicKey("So11111111111111111111111111111111111111112")}
 MINTS = {
-    "SOL": PublicKey("So11111111111111111111111111111111111111112"),
-    "BTC": PublicKey("qfnqNqs3nCAHjnyCgLRDbBtq4p2MtHZxw8YjSyYhPoL"),
-    "ETH": PublicKey("FeGn77dhg1KXRRFeSwwMiykZnZPw5JXW6naf2aQgZDQf")
+    Asset.SOL: PublicKey("So11111111111111111111111111111111111111112"),
+    Asset.BTC: PublicKey("qfnqNqs3nCAHjnyCgLRDbBtq4p2MtHZxw8YjSyYhPoL"),
+    Asset.ETH: PublicKey("FeGn77dhg1KXRRFeSwwMiykZnZPw5JXW6naf2aQgZDQf")
 }
-UNDERLYINGS = [MINTS["SOL"]]
+UNDERLYINGS = [MINTS[Asset.SOL], MINTS[Asset.BTC], MINTS[Asset.ETH]]
 
 DEX_PID = {
-    "localnet": PublicKey("5CmWtUihvSrJpaUrpJ3H1jUa9DRjYz4v2xs6c3EgQWMf"),
-    "devnet": PublicKey("5CmWtUihvSrJpaUrpJ3H1jUa9DRjYz4v2xs6c3EgQWMf"),
-    "mainnet": PublicKey("zDEXqXEG7gAyxb1Kg9mK5fPnUdENCGKzWrM21RMdWRq"),
+    Network.LOCALNET: PublicKey("5CmWtUihvSrJpaUrpJ3H1jUa9DRjYz4v2xs6c3EgQWMf"),
+    Network.DEVNET: PublicKey("5CmWtUihvSrJpaUrpJ3H1jUa9DRjYz4v2xs6c3EgQWMf"),
+    Network.MAINNET: PublicKey("zDEXqXEG7gAyxb1Kg9mK5fPnUdENCGKzWrM21RMdWRq"),
 }
 
 MAX_SETTLE_AND_CLOSE_PER_TX = 4
@@ -41,22 +46,22 @@ DEFAULT_ORDERBOOK_DEPTH = 5
 MAX_ORDER_TAG_LENGTH = 4
 
 PYTH_PRICE_FEEDS = {
-    "localnet": {
+    Network.LOCALNET: {
         "SOL/USD": PublicKey("2pRCJksgaoKRMqBfa7NTdd6tLYe9wbDFGCcCCZ6si3F7"),
     },
-    "devnet": {
+    Network.DEVNET: {
         "SOL/USD": PublicKey("J83w4HKfqxwcq3BEMMkPFSppX3gqekLyLJBexebFVkix"),
     },
-    "mainnet": {
+    Network.MAINNET: {
         "SOL/USD": PublicKey("H6ARHf6YXhGYeQfUzQNGk6rDNnLBQKrenN712K4AQJEG"),
     },
 }
 
 
 USDC_MINT_ADDRESS = {
-    "localnet": PublicKey("6PEh8n3p7BbCTykufbq1nSJYAZvUp6gSwEANAs1ZhsCX"),
-    "devnet": PublicKey("6PEh8n3p7BbCTykufbq1nSJYAZvUp6gSwEANAs1ZhsCX"),
-    "mainnet": PublicKey("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"),
+    Network.LOCALNET: PublicKey("6PEh8n3p7BbCTykufbq1nSJYAZvUp6gSwEANAs1ZhsCX"),
+    Network.DEVNET: PublicKey("6PEh8n3p7BbCTykufbq1nSJYAZvUp6gSwEANAs1ZhsCX"),
+    Network.MAINNET: PublicKey("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"),
 }
 
 CLUSTER_URLS = {
@@ -91,4 +96,4 @@ MAX_POSITION_MOVEMENTS = 10
 BPS_DENOMINATOR = 10000
 
 # Path to IDL
-IDL_PATH = Path('./idl/zeta.json')
+IDL_PATH = Path('../idl/zeta.json')

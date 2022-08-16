@@ -1,4 +1,5 @@
 import json
+import os
 
 from httpx import AsyncClient
 from assets import Asset
@@ -45,14 +46,18 @@ class Exchange(metaclass=ExchangeMeta):
     provider: Provider = None
     clock_timestamp = None
     ledger_wallet = None
-    
+    _sub_exchanges = {}
+    _zeta_group = None
+    _markets = []
+    _assets = []
+
     @property
     def oracle(self):
         return self._oracle
 
     @property
     def zetagroup(self):
-        return self._zetagroup
+        return self._zeta_group
 
     @property
     def state_address(self):
@@ -87,26 +92,32 @@ class Exchange(metaclass=ExchangeMeta):
 
     def __init__(self, program_id, network, connection, wallet):
         # TODO: Come back to this later and see if relevant
+        print("init function for exchange object")
+        self._sub_exchanges = {}
         pass
 
     async def _init(self, program_id: PublicKey, network: Network, connection: AsyncClient, wallet: Wallet, opts, assets: list[Asset]):
         self._provider = Provider(connection, wallet, opts)
         self._network = network
+        Exchange.network = network
         self._oracle = Oracle(self._network, connection)
         self._connection = connection
+        print(os.listdir("./"))
         with IDL_PATH.open() as f:
             raw_idl = json.load(f)
         idl = Idl.from_json(raw_idl)
         self._program = Program(idl, program_id, self._provider)
         # self._risk_calculator = RiskCalculator()
+        Exchange.program_id = program_id
         self._program_id = program_id
         self._last_poll_timestamp = 0
-        self._zetagroup = None
+        self._zeta_group = None
         self._state_address = None
         self._is_initialized = False
         self._assets = assets
+        Exchange._assets = assets
         self._opts = opts
-        self._sub_exchanges: list[SubExchange] = []
+        self._sub_exchanges: map[SubExchange] = {}
         self._markets = []
         self._program_subscription_ids = []
         for asset in assets:
@@ -174,7 +185,7 @@ class Exchange(metaclass=ExchangeMeta):
         except:
             print("Initialize zeta group failed")
 
-        await self.update_state()
+        await self.update_state(self)
         await self.get_sub_exchange(asset).update_zeta_group()
 
     @classmethod
@@ -191,13 +202,14 @@ class Exchange(metaclass=ExchangeMeta):
                 opts,
                 assets
             )
-        self._risk_calculator = RiskCalculator(self.assets)
+        # self._risk_calculator = RiskCalculator(self.assets)
         self._connection = connection
-        mint_authority, _mint_authority_nonce = await utils.get_mint_authority(
+        self.program_id = program_id
+        mint_authority, _mint_authority_nonce = utils.get_mint_authority(
             self.program_id
         )
-        state, _state_nonce = await utils.get_state(self.program_id)
-        serum_authority, _serum_nonce = await utils.get_serum_authority(
+        state, _state_nonce = utils.get_state(self.program_id)
+        serum_authority, _serum_nonce = utils.get_serum_authority(
             self.program_id
         )
 
@@ -212,10 +224,10 @@ class Exchange(metaclass=ExchangeMeta):
         self._last_poll_timestamp = 0
 
         self._oracle = Oracle(network, connection)
-        await self.subscribe_oracle(self.assets, callback)
+        # await self.subscribe_oracle(self.assets, callback)
 
         for asset in assets:
-            await self.get_sub_exchange(asset).load(
+            await self.get_sub_exchange(self, asset).load(
                 asset,
                 self.program_id,
                 self.network,
@@ -225,21 +237,31 @@ class Exchange(metaclass=ExchangeMeta):
             )
         
         for asset in assets:
-            gt = self.get_markets(asset)
+            gt = self.get_markets(self, asset)
             for each in gt:
                 self._markets.append(each)
+        print(Exchange.program.account.keys())
+        ### TODO: CLEAN UP THE NEXT TWO BLOCKS OF CODE THAT ARE COMMENTED OUT HERE
         
-        await self.update_state()
-        await self.subscribe_clock(callback)
+        # Exchange._state = await Exchange.program.account["State"].fetch(
+        #     Exchange.state_address
+        # )
+
+        # await self.subscribe_clock(callback)
 
         self._is_initialized = True
     
     async def add_sub_exchange(self, asset, sub_exchange):
         self._sub_exchanges[asset] = sub_exchange
+        Exchange._sub_exchanges[asset] = sub_exchange
     
     def get_sub_exchange(self, asset: Asset) -> SubExchange:
+        # print(self._sub_exchanges)
+        print("getting subexchange of asset: " + str(asset))
+        print(Exchange._sub_exchanges.keys())
         try:
-            return self._sub_exchanges[asset]
+            # return self._sub_exchanges[asset]
+            return Exchange._sub_exchanges[asset]
         except:
             raise Exception("Failed to get subexchange for asset, have you called Exchange.load()?")
         
@@ -248,7 +270,8 @@ class Exchange(metaclass=ExchangeMeta):
     
     def subscribe_inline_callback(self, asset, price, callback):
         if self._is_initialized:
-            self._risk_calculator.update_margin_requirements(asset)
+            # self._risk_calculator.update_margin_requirements(asset)
+            print("stubbed function")
         if callback != None:
             callback(asset, EventType.ORACLE, price)
 
@@ -281,9 +304,10 @@ class Exchange(metaclass=ExchangeMeta):
             await self.update_zeta_group(asset)
             self.get_zeta_group_markets(asset).update_expiry_series()
     
-    async def update_state(self):
-        self._state = await self._program.account.state.fetch(
-            self.state_address
+    async def update_state():
+        print("updating state")
+        Exchange._state = await Exchange._program.account.state.fetch(
+            Exchange.state_address
         )
     
     async def update_zeta_state(self, params):
@@ -364,10 +388,10 @@ class Exchange(metaclass=ExchangeMeta):
         return self.get_sub_exchange(asset).markets
     
     def get_market(self, asset, index):
-        return self.get_sub_exchange(asset).markets.markets[index]
+        return self.get_sub_exchange(asset)._markets.markets[index]
     
     def get_markets(self, asset):
-        return self.get_sub_exchange(asset).markets.markets
+        return self.get_sub_exchange(self, asset)._markets.markets
     
     def get_markets_by_expiry_index(self, asset, index):
         return self.get_sub_exchange(asset).markets.get_markets_by_expiry_index(index)
@@ -467,9 +491,15 @@ class Exchange(metaclass=ExchangeMeta):
         """
         self.state = await self._program.account.get('State').fetch(self.state_address)
 
-    async def update_zeta_group(self):
-        self._zeta_group = await self._program.account.get('ZetaGroup').fetch(self._zeta_group_address)
-        self.update_margin_params()
+    async def update_zeta_exchange(self):
+        for asset in self._assets:
+            await self.update_zeta_group(asset)
+            await self.get_zeta_group_markets(asset).update_expiry_series()
+
+    async def update_zeta_group(self, asset):
+        # self._zeta_group = await self._program.account.get('ZetaGroup').fetch(self._zeta_group_address)
+        # Exchange._zeta_group = self._zeta_group
+        await self.get_sub_exchange(asset).update_zeta_group()
 
     def update_margin_params(self):
         if self._zeta_group is None:

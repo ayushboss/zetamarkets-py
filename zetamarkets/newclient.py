@@ -1,13 +1,14 @@
 from sqlite3 import SQLITE_DROP_TEMP_INDEX
 import program_instructions as instructions
-from program_instructions import initialize_margin_account_tx, deposit_ix
-from anchorpy.utils import get_token_account_info
+# from program_instructions import initialize_margin_account_tx, deposit_ix
+# from anchorpy.utils import get_token_account_info
 from solana.transaction import Transaction
 from anchorpy import Program, Provider, Wallet
 import utils
 from exchange import Exchange
 import constants
 from newsubclient import SubClient
+from solana.publickey import PublicKey
 import my_client.accounts
 
 class Client:
@@ -66,10 +67,18 @@ class Client:
     
     async def load(connection, wallet: Wallet, opts, callback, throttle):
         client = Client(connection, wallet, opts)
-        client._usdc_account_address = await utils.get_associated_token_address(
+        print("Exchange USDC Mint Address:"  + str(Exchange._usdc_mint_address))
+        print("Wallet Public Key: " + str(wallet.public_key))
+        client._usdc_account_address = utils.get_associated_token_address(
             Exchange._usdc_mint_address,
             wallet.public_key
         )
+        print("testing out this stuff")
+        print(client._usdc_account_address)
+
+        client._usdc_account_address = PublicKey("HdRP4pBmEKmV3s9tGnM3htAgYKGxXhzuzmFcNJRYiUfF")
+
+        print("WAllet address: " + str(client._usdc_account_address))
 
         client._whitelist_deposit_address = None
         try:
@@ -105,7 +114,10 @@ class Client:
             print("An error occurred during the whitelisting trading fees process")
         
         for asset in Exchange._assets:
-            subclient = await SubClient.load(
+            print("each asset:")
+            print(asset)
+            subclient = SubClient(asset, client)
+            subclient = await subclient.load(
                 asset,
                 client,
                 connection,
@@ -115,7 +127,8 @@ class Client:
             )
             client.add_sub_client(asset, subclient)
         
-        client.set_polling(constants.DEFAULT_CLIENT_TIMER_INTERVAL)
+        ### TODO: FIGURE OUT THIS POLL INTERVAL STUFF
+        # client.set_polling(constants.DEFAULT_CLIENT_TIMER_INTERVAL)
         client._referral_account_address = None
         client._referral_alias = None
         
@@ -262,9 +275,10 @@ class Client:
         return await self.get_sub_client(asset).deposit(amount)
 
     async def usdc_account_check(self):
+        print(self.usdc_account_address)
         try:
             token_account_info = await utils.get_token_account_info(
-                self.provider.connection,
+                self.provider,
                 self.usdc_account_address
             )
             print("Found user USDC associated token account " + str(self.usdc_account_address) + ", Balance = " + str(utils.convert_native_lot_size_to_decimal(token_account_info.amount)))
@@ -299,7 +313,8 @@ class Client:
             return allTxIds
     
     def get_margin_account_state(self, asset):
-        return Exchange.risk_calculator.get_margin_account_state(self.get_sub_client(asset).margin_account)
+        # return Exchange.risk_calculator.get_margin_account_state(self.get_sub_client(asset).margin_account)
+        print("temporarily stubbed function")
     
     async def close_margin_account(self, asset):
         return await self.get_sub_client(asset).close_margin_account()

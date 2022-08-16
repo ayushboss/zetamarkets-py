@@ -2,7 +2,6 @@ from ctypes.wintypes import tagMSG
 from datetime import datetime
 from re import M
 import string
-from this import d
 
 import anchorpy
 from exchange import Exchange
@@ -11,7 +10,6 @@ from solana.transaction import Transaction
 import constants
 import utils
 from assets import Asset
-from newclient import Client
 from events import EventType
 import program_instructions as instructions
 import var_types as types
@@ -77,12 +75,12 @@ class SubClient:
             raise Exception("Polling interval invalid!")
         self._poll_interval = interval
     
-    def __init__(self, asset, parent: Client):
+    def __init__(self, asset, parent):
         self._asset = asset
-        self._sub_exchange = Exchange.get_sub_exchange(asset)
+        self._sub_exchange = Exchange.get_sub_exchange(self, asset)
         self._open_orders_accounts = []
         for i in range(len(self._sub_exchange.zeta_group.products)):
-            self._open_orders_accounts.append(PublicKey(0))
+            self._open_orders_accounts.append(PublicKey("11111111111111111111111111111111"))
         self._parent = parent
 
         self._margin_positions = []
@@ -101,18 +99,18 @@ class SubClient:
         self._connection = None
         self._pending_update_slot = 0
     
-    async def load(self, asset: Asset, parent: Client, connection, wallet: anchorpy.Wallet, callback = None, throttle: bool = False):
+    async def load(self, asset: Asset, parent, connection, wallet: anchorpy.Wallet, callback = None, throttle: bool = False):
         subClient = SubClient(asset, parent)
-        margin_account_address, _margin_account_nonce = await utils.get_margin_account(
+        margin_account_address, _margin_account_nonce = utils.get_margin_account(
             Exchange.program_id,
             subClient._sub_exchange.zeta_group_address,
-            wallet.public_key()
+            wallet.public_key
         )
 
-        spread_account_address, _spread_account_nonce = await utils.get_spread_account(
+        spread_account_address, _spread_account_nonce = utils.get_spread_account(
             Exchange.program_id,
             subClient._sub_exchange.zeta_group_address,
-            wallet.public_key()
+            wallet.public_key
         )
 
         subClient._connection = connection
@@ -144,7 +142,7 @@ class SubClient:
 
             subClient._pending_update = True
         except:
-            raise Exception("User does not have a margin account.")
+            print("User does not have a margin account.")
 
         try:
             subClient._spread_account = await my_client.accounts.spread_account.SpreadAccount.fetch(
@@ -154,7 +152,7 @@ class SubClient:
             )
             subClient.update_spread_positions()
         except:
-            raise Exception("User does not have a spread account.")
+            print("User does not have a spread account.")
         
         ### TODO: NEED TO FIGURE OUT HOW TO IMPLEMENT CALLBACK FUNCTION FUNCTIONALITY
 
@@ -271,7 +269,7 @@ class SubClient:
     
     async def close_spread_account(self):
         if self._spread_account == None:
-            raise Excpetion("User has no spread account to close")
+            raise Exception("User has no spread account to close")
 
         sub_exchange = self._sub_exchange
         tx = Transaction()
@@ -334,7 +332,7 @@ class SubClient:
         market_index = self._sub_exchange.markets.get_market_index(market)
         
         open_orders_pda = None
-        if self._open_orders_accounts[market_index] == PublicKey(0):
+        if self._open_orders_accounts[market_index] == PublicKey("11111111111111111111111111111111"):
             print("User doesn't have open orders account. Initialising for market " + str(market))
         
             init_ix, _open_orders_pda = await instructions.initialize_open_orders_ix(
@@ -374,7 +372,7 @@ class SubClient:
         market_index = self._sub_exchange.markets.get_market_index(market)
 
         open_orders_pda = None
-        if self._open_orders_accounts[market_index] == PublicKey(0):
+        if self._open_orders_accounts[market_index] == PublicKey("11111111111111111111111111111111"):
             print("User doesn't have open orders account. Initialising for market: " + str(market))
             init_ix, _open_orders_pda = await instructions.initialize_open_orders_ix(
                 self.asset,
@@ -412,7 +410,7 @@ class SubClient:
         market_index = sub_exchange.markets.get_market_index(market)
 
         open_orders_pda = None
-        if self._open_orders_accounts[market_index] == PublicKey(0):
+        if self._open_orders_accounts[market_index] == PublicKey("11111111111111111111111111111111"):
             print("User doesn't have open orders account. Initializing for market: " + str(market))
             init_ix, _open_orders_pda = await instructions.initialize_open_orders_ix(
                 self.asset,
@@ -485,7 +483,7 @@ class SubClient:
         market_index = self._sub_exchange.markets.get_market_index(market)
 
         open_orders_pda = None
-        if self._open_orders_accounts[market_index] == PublicKey(0):
+        if self._open_orders_accounts[market_index] == PublicKey("11111111111111111111111111111111"):
             print("User doesn't have open orders account for this asset. Initializing for market: " + str(market))
             init_ix, _open_orders_pda = await instructions.initialize_open_orders_ix(
                 self.asset,
@@ -769,7 +767,7 @@ class SubClient:
     
     async def initialize_open_orders_account(self, market):
         market_index = self._sub_exchange.markets.get_market_index(market)
-        if self._open_orders_accounts[market_index] != PublicKey(0):
+        if self._open_orders_accounts[market_index] != PublicKey("11111111111111111111111111111111"):
             raise Exception("User already has an open orders account for market")
         
         init_ix, open_orders_pda = await instructions.initialize_open_orders_ix(
@@ -786,7 +784,7 @@ class SubClient:
     
     async def close_open_orders_account(self, market):
         market_index = self._sub_exchange.markets.get_market_index(market)
-        if self._open_orders_accounts[market_index] == PublicKey(0):
+        if self._open_orders_accounts[market_index] == PublicKey("11111111111111111111111111111111"):
             raise Exception("User has no open orders account for this market!")
         
         vault_owner, _vault_signer_nonce = await utils.get_serum_vault_owner_and_nonce(
@@ -815,7 +813,7 @@ class SubClient:
         )
 
         txId = await utils.process_transaction(self._parent.provider, tx)
-        self._open_orders_accounts[market_index] = PublicKey(0)
+        self._open_orders_accounts[market_index] = PublicKey("11111111111111111111111111111111")
         return txId
     
     async def close_multiple_open_orders_account(self, markets):
@@ -824,7 +822,7 @@ class SubClient:
         for i in range(len(markets)):
             market = markets[i]
             market_index = sub_exchange.markets.get_market_index(market)
-            if self._open_orders_accounts[market_index] == PublicKey(0):
+            if self._open_orders_accounts[market_index] == PublicKey("11111111111111111111111111111111"):
                 raise Exception("User has no open orders account for this market!")
             vault_owner, _vault_signer_nonce = await utils.get_serum_vault_owner_and_nonce(
                 market,
@@ -858,7 +856,7 @@ class SubClient:
         for i in range(len(markets)):
             market = markets[i]
             market_index = sub_exchange.markets.get_market_index(market)
-            self._open_orders_accounts[market_index] = PublicKey(0)
+            self._open_orders_accounts[market_index] = PublicKey("11111111111111111111111111111111")
         
         return txIds
     
@@ -1105,11 +1103,11 @@ class SubClient:
     ### TODO: NEED TO FINISH THIS FUNCTION
     async def update_open_order_addresses(self):
         for index, product in enumerate(self._sub_exchange.zeta_group.products):
-            if self._margin_account.open_orders_nonce[index] != 0 and self._open_orders_accounts[index] == PublicKey("0"):
+            if self._margin_account.open_orders_nonce[index] != 0 and self._open_orders_accounts[index] == PublicKey("11111111111111111111111111111111"):
                 open_orders_pda, _open_orders_nonce = await utils.get_open_orders(
                     Exchange.program_id,
                     product.market,
-                    self._parent.public_key
+                    self._parent.public_key()
                 )
                 self._open_orders_accounts[index] = open_orders_pda
 
